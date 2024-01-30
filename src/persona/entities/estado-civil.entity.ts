@@ -1,0 +1,14 @@
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Miembro } from './miembro.entity';
+
+@Entity({ schema: 'persona', name: 'estados_civiles' })
+export class EstadoCivil {
+  @PrimaryGeneratedColumn()
+  estado_civil_id: number;
+
+  @Column()
+  descripcion: string;
+
+  @OneToMany(() => Miembro, (miembro) => miembro.estado_civil)
+  miembros: Miembro[];
+}
