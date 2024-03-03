@@ -25,7 +25,7 @@ export class HistorialMiembro {
   lider: Miembro;
 
   @ManyToOne(() => Miembro, (miembro) => miembro.supervisados)
-  @JoinColumn({ name: 'supervidor_fk_id' })
+  @JoinColumn({ name: 'supervisor_fk_id' })
   supervisor: Miembro;
 
   @ManyToOne(() => Servicio, (servicio) => servicio.historial_miembros)
