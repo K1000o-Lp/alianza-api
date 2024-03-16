@@ -1,5 +1,6 @@
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Get, Put } from '@nestjs/common';
 import { FormacionService } from './formacion.service';
+import { actualizarEvaluacionDto } from './dtos';
 
 @Controller('formacion')
 export class FormacionController {
@@ -18,5 +19,15 @@ export class FormacionController {
   @Get('competencias')
   async obtenerCompetencias() {
     return await this.formacionService.obtenerCompetencias();
+  }
+
+  @Put('evaluaciones')
+  async actualizarEvaluaciones(
+    @Body()
+    actualizarEvaluacionesDto: actualizarEvaluacionDto[],
+  ) {
+    return await this.formacionService.actualizarEvaluaciones(
+      actualizarEvaluacionesDto,
+    );
   }
 }

@@ -111,21 +111,21 @@ export class PersonaService {
         },
       },
       where: {
-        cedula: options.cedula,
+        cedula: options?.cedula,
         evaluaciones: {
           requisito: {
-            requisito_id: options.requisito,
+            requisito_id: options?.requisito,
           },
           competencia: {
-            competencia_id: options.competencia,
+            competencia_id: options?.competencia,
           },
         },
         historiales: {
           servicio: {
-            servicio_id: options.rol,
+            servicio_id: options?.rol,
           },
           zona: {
-            zona_id: options.zona,
+            zona_id: options?.zona,
           },
         },
       },

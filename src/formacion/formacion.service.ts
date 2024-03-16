@@ -1,7 +1,19 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Competencia, Evaluacion, Formacion, Requisito } from './entities';
+import {
+  Asistencia,
+  Competencia,
+  Evaluacion,
+  Evento,
+  Formacion,
+  Requisito,
+} from './entities';
+import {
+  actualizarEvaluacionDto,
+  crearAsistenciaDto,
+  crearEventoDto,
+} from './dtos';
 
 @Injectable()
 export class FormacionService {
@@ -14,6 +26,10 @@ export class FormacionService {
     private competenciaRepository: Repository<Competencia>,
     @InjectRepository(Evaluacion)
     private evaluacionRepository: Repository<Evaluacion>,
+    @InjectRepository(Evento)
+    private eventoRepository: Repository<Evento>,
+    @InjectRepository(Asistencia)
+    private asistenciaRepository: Repository<Asistencia>,
   ) {}
 
   async obtenerFormaciones(): Promise<Formacion[]> {
@@ -32,6 +48,58 @@ export class FormacionService {
     return await this.competenciaRepository.findOne({
       where: { competencia_id: term },
     });
+  }
+
+  async obtenerEvento(options: { zona?: number }): Promise<Evento[]> {
+    return await this.eventoRepository.find({
+      where: { zona: { zona_id: options?.zona } },
+    });
+  }
+
+  async obtenerAsistencias(options: { evento: number }): Promise<Asistencia[]> {
+    return await this.asistenciaRepository.find({
+      where: {
+        evento: {
+          evento_id: options.evento,
+        },
+      },
+      order: {
+        creado_en: 'DESC',
+      },
+    });
+  }
+
+  async crearEvento(crearEventoDto: crearEventoDto): Promise<Evento> {
+    const { zona_fk_id, nombre, descripcion } = crearEventoDto;
+
+    const evento = this.eventoRepository.create({
+      nombre,
+      descripcion,
+      zona: { zona_id: zona_fk_id },
+    });
+
+    await this.requisitoRepository.save(evento);
+
+    return evento;
+  }
+
+  async crearAsistencia(
+    crearAsistenciaDto: crearAsistenciaDto,
+  ): Promise<Asistencia> {
+    const { evento_fk_id, miembro_fk_id } = crearAsistenciaDto;
+
+    const asistencia = this.asistenciaRepository.create({
+      evento: {
+        evento_id: evento_fk_id,
+      },
+      miembro: {
+        miembro_id: miembro_fk_id,
+      },
+    });
+
+    await this.asistenciaRepository.save(asistencia);
+
+    return asistencia;
   }
 
   async crearEvaluacionesPorDefecto(): Promise<Evaluacion[] | null> {
@@ -59,5 +127,38 @@ export class FormacionService {
     await this.evaluacionRepository.save(evaluaciones);
 
     return evaluaciones;
+  }
+
+  async actualizarEvaluaciones(
+    evaluaciones: actualizarEvaluacionDto[],
+  ): Promise<Evaluacion[]> {
+    if (!Array.isArray(evaluaciones)) {
+      throw new TypeError();
+    }
+
+    const evaluacionesActualizadas = await Promise.all(
+      evaluaciones.map(async (evaluacion: actualizarEvaluacionDto) => {
+        await this.evaluacionRepository.update(
+          {
+            evaluacion_id: evaluacion.evaluacion_id,
+          },
+          { competencia: evaluacion.competencia },
+        );
+
+        const evaluacionActualizada = await this.evaluacionRepository.findOne({
+          relations: {
+            requisito: true,
+            competencia: true,
+          },
+          where: {
+            evaluacion_id: evaluacion.evaluacion_id,
+          },
+        });
+
+        return evaluacionActualizada;
+      }),
+    );
+
+    return evaluacionesActualizadas;
   }
 }

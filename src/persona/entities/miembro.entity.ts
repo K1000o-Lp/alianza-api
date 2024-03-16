@@ -16,6 +16,7 @@ import { Discapacidad } from './discapacidad.entity';
 import { Evaluacion } from 'src/formacion/entities/evaluacion.entity';
 import { Ocupacion } from './ocupacion.entity';
 import { HistorialMiembro } from 'src/organizacion/entities/historial-miembro.entity';
+import { Asistencia } from 'src/formacion/entities/asistencia.entity';
 
 @Entity({ schema: 'persona', name: 'miembros' })
 export class Miembro {
@@ -73,6 +74,9 @@ export class Miembro {
     (historial_miembro) => historial_miembro.supervisor,
   )
   supervisados: HistorialMiembro[];
+
+  @OneToMany(() => Asistencia, (asistencia) => asistencia.miembro)
+  asistencias: Asistencia[];
 
   @CreateDateColumn()
   creado_en: Timestamp;
