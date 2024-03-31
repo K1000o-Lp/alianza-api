@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
   Asistencia,
-  Competencia,
   Evaluacion,
   Evento,
   Formacion,
@@ -14,6 +13,7 @@ import {
   crearAsistenciaDto,
   crearEventoDto,
 } from './dtos';
+import { crearAsistenciasDto } from './dtos/crear-asistencias-dto';
 
 @Injectable()
 export class FormacionService {
@@ -22,8 +22,6 @@ export class FormacionService {
     private formacionRepository: Repository<Formacion>,
     @InjectRepository(Requisito)
     private requisitoRepository: Repository<Requisito>,
-    @InjectRepository(Competencia)
-    private competenciaRepository: Repository<Competencia>,
     @InjectRepository(Evaluacion)
     private evaluacionRepository: Repository<Evaluacion>,
     @InjectRepository(Evento)
@@ -40,19 +38,9 @@ export class FormacionService {
     return await this.requisitoRepository.find();
   }
 
-  async obtenerCompetencias(): Promise<Competencia[]> {
-    return await this.competenciaRepository.find();
-  }
-
-  async obtenerCompetencia(term: number): Promise<Competencia | null> {
-    return await this.competenciaRepository.findOne({
-      where: { competencia_id: term },
-    });
-  }
-
   async obtenerEvento(options: { zona?: number }): Promise<Evento[]> {
     return await this.eventoRepository.find({
-      where: { zona: { zona_id: options?.zona } },
+      where: { zona: { id: options?.zona } },
     });
   }
 
@@ -60,7 +48,7 @@ export class FormacionService {
     return await this.asistenciaRepository.find({
       where: {
         evento: {
-          evento_id: options.evento,
+          id: options.evento,
         },
       },
       order: {
@@ -70,15 +58,15 @@ export class FormacionService {
   }
 
   async crearEvento(crearEventoDto: crearEventoDto): Promise<Evento> {
-    const { zona_fk_id, nombre, descripcion } = crearEventoDto;
+    const { zona_id, nombre, descripcion } = crearEventoDto;
 
     const evento = this.eventoRepository.create({
       nombre,
       descripcion,
-      zona: { zona_id: zona_fk_id },
+      zona: { id: zona_id },
     });
 
-    await this.requisitoRepository.save(evento);
+    await this.eventoRepository.save(evento);
 
     return evento;
   }
@@ -86,14 +74,14 @@ export class FormacionService {
   async crearAsistencia(
     crearAsistenciaDto: crearAsistenciaDto,
   ): Promise<Asistencia> {
-    const { evento_fk_id, miembro_fk_id } = crearAsistenciaDto;
+    const { evento_id, miembro_id } = crearAsistenciaDto;
 
     const asistencia = this.asistenciaRepository.create({
       evento: {
-        evento_id: evento_fk_id,
+        id: evento_id,
       },
       miembro: {
-        miembro_id: miembro_fk_id,
+        id: miembro_id,
       },
     });
 
@@ -102,16 +90,40 @@ export class FormacionService {
     return asistencia;
   }
 
+  async crearAsistencias(
+    crearAsistenciasDto: crearAsistenciasDto,
+  ): Promise<Asistencia[]> {
+
+    const { evento_id, miembros } = crearAsistenciasDto;
+
+    const asistencias = await Promise.all(
+      miembros?.map(async ({ miembro_id }) => {
+        const asistencia = this.asistenciaRepository.create({
+          evento: {
+            id: evento_id,
+          },
+          miembro: {
+            id: miembro_id,
+          }
+        })
+
+        await this.asistenciaRepository.save(asistencia);
+
+        return asistencia;
+      })
+    );
+
+    return asistencias;
+  }
+
   async crearEvaluacionesPorDefecto(): Promise<Evaluacion[] | null> {
-    const NO = 1;
     const requisitos = await this.obtenerRequisitos();
-    const competencia = await this.obtenerCompetencia(NO);
 
     const evaluaciones = this.evaluacionRepository.create(
       requisitos.map((requisito) => {
         return {
           requisito: requisito,
-          competencia: competencia,
+          resultado: false,
         };
       }),
     );
@@ -140,18 +152,17 @@ export class FormacionService {
       evaluaciones.map(async (evaluacion: actualizarEvaluacionDto) => {
         await this.evaluacionRepository.update(
           {
-            evaluacion_id: evaluacion.evaluacion_id,
+            id: evaluacion.id,
           },
-          { competencia: evaluacion.competencia },
+          { resultado: evaluacion.resultado },
         );
 
         const evaluacionActualizada = await this.evaluacionRepository.findOne({
           relations: {
             requisito: true,
-            competencia: true,
           },
           where: {
-            evaluacion_id: evaluacion.evaluacion_id,
+            id: evaluacion.id,
           },
         });
 

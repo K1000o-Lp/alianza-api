@@ -12,10 +12,10 @@ import { Asistencia } from './asistencia.entity';
 @Entity({ schema: 'formacion', name: 'eventos' })
 export class Evento {
   @PrimaryGeneratedColumn()
-  evento_id: number;
+  id: number;
 
   @ManyToOne(() => Zona, (zona) => zona.eventos)
-  @JoinColumn({ name: 'zona_fk_id' })
+  @JoinColumn({ name: 'zona_id' })
   zona: Zona;
 
   @OneToMany(() => Asistencia, (asistencia) => asistencia.miembro)

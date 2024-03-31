@@ -4,7 +4,7 @@ import { HistorialMiembro } from './historial-miembro.entity';
 @Entity({ schema: 'organizacion', name: 'servicios' })
 export class Servicio {
   @PrimaryGeneratedColumn()
-  servicio_id: number;
+  id: number;
 
   @Column()
   descripcion: string;

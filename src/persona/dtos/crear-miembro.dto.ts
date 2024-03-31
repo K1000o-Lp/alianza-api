@@ -11,13 +11,13 @@ export interface CrearMiembroDto {
 
   hijos: number;
 
-  educacion_fk_id: number;
+  educacion_id: number;
 
-  estado_civil_fk_id: number;
+  estado_civil_id: number;
 
-  ocupacion_fk_id: number;
+  ocupacion_id: number;
 
-  discapacidad_fk_id: number;
+  discapacidad_id: number;
 
   historial: crearHistorialMiembroDto;
 }

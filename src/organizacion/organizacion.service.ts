@@ -23,15 +23,13 @@ export class OrganizacionService {
   }
 
   async crearHistorialMiembro(
-    crearHistorialMiembroDto: crearHistorialMiembroDto,
+    dto: crearHistorialMiembroDto,
   ): Promise<HistorialMiembro> {
-    const { ...data } = crearHistorialMiembroDto;
+    const { ...data } = dto;
 
     const historialMiembro = this.historialMiembroRepository.create({
-      lider: { miembro_id: data.lider_fk_id },
-      supervisor: { miembro_id: data.lider_fk_id },
-      servicio: { servicio_id: data.servicio_fk_id },
-      zona: { zona_id: data.zona_fk_id },
+      servicio: { id: data.servicio_id },
+      zona: { id: data.zona_id },
     });
 
     await this.historialMiembroRepository.save(historialMiembro);

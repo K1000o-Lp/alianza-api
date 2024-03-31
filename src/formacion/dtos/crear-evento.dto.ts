@@ -1,5 +1,5 @@
 export interface crearEventoDto {
-  zona_fk_id: number;
+  zona_id: number;
   nombre: string;
   descripcion: string;
 }

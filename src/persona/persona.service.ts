@@ -7,7 +7,7 @@ import {
   Miembro,
   Ocupacion,
 } from './entities';
-import { Repository } from 'typeorm';
+import { Repository, getManager } from 'typeorm';
 import { CrearMiembroDto } from './dtos/crear-miembro.dto';
 import { FormacionService } from 'src/formacion/formacion.service';
 import { OrganizacionService } from 'src/organizacion/organizacion.service';
@@ -34,7 +34,7 @@ export class PersonaService {
 
   async obtenerDiscapacidad(term: number): Promise<Discapacidad> {
     return await this.discapacidadRepository.findOne({
-      where: { discapacidad_id: term },
+      where: { id: term },
     });
   }
 
@@ -44,7 +44,7 @@ export class PersonaService {
 
   async obtenerEducacion(term: number): Promise<Educacion> {
     return await this.educacionRespository.findOne({
-      where: { educacion_id: term },
+      where: { id: term },
     });
   }
 
@@ -54,7 +54,7 @@ export class PersonaService {
 
   async obtenerEstadoCivil(term: number): Promise<EstadoCivil> {
     return await this.estadoCivilRepository.findOne({
-      where: { estado_civil_id: term },
+      where: { id: term },
     });
   }
 
@@ -64,12 +64,12 @@ export class PersonaService {
 
   async obtenerOcupacion(term: number): Promise<Ocupacion> {
     return await this.ocupacionRepository.findOne({
-      where: { ocupacion_id: term },
+      where: { id: term },
     });
   }
 
-  async crearMiembro(crearMiembroDto: CrearMiembroDto): Promise<Miembro> {
-    const { historial, ...data } = crearMiembroDto;
+  async crearMiembro(dto: CrearMiembroDto): Promise<Miembro> {
+    const { historial, ...data } = dto;
 
     const evaluaciones =
       await this.formacionService.crearEvaluacionesPorDefecto();
@@ -78,13 +78,25 @@ export class PersonaService {
       await this.organizacionService.crearHistorialMiembro(historial);
 
     const miembro = this.miembroRepository.create({
-      cedula: data.cedula,
+      cedula: data.cedula ? data.cedula : null,
       nombre_completo: data.nombre_completo,
-      telefono: data.telefono,
-      fecha_nacimiento: data.fecha_nacimiento,
+      fecha_nacimiento: data.fecha_nacimiento? data.fecha_nacimiento : null,
+      telefono: data.telefono ? data.telefono : null,
       hijos: data.hijos,
+      estado_civil: {
+        id: data.estado_civil_id ? data.estado_civil_id : null,
+      },
+      educacion: {
+        id: data.educacion_id,
+      },
+      ocupacion: {
+        id: data.ocupacion_id,
+      },
+      discapacidad: {
+        id: data.discapacidad_id,
+      },
       evaluaciones: evaluaciones,
-      historiales: [historialMiembro],
+      historiales:  [ historialMiembro ],
     });
 
     await this.miembroRepository.save(miembro);
@@ -93,66 +105,72 @@ export class PersonaService {
   }
 
   async obtenerMiembros(options: {
+    id?: number;
     cedula?: string;
     zona?: number;
     rol?: number;
     requisito?: number;
-    competencia?: number;
+    resultado?: boolean;
   }): Promise<Miembro[]> {
     const miembros = await this.miembroRepository.find({
       relations: {
         historiales: {
           servicio: true,
-          lider: true,
         },
         evaluaciones: {
           requisito: true,
-          competencia: true,
         },
       },
       where: {
+        id: options?.id,
         cedula: options?.cedula,
         evaluaciones: {
           requisito: {
-            requisito_id: options?.requisito,
+            id: options?.requisito,
           },
-          competencia: {
-            competencia_id: options?.competencia,
-          },
+          resultado: options?.resultado
         },
         historiales: {
           servicio: {
-            servicio_id: options?.rol,
+            id: options?.rol,
           },
           zona: {
-            zona_id: options?.zona,
+            id: options?.zona,
           },
         },
       },
+      order: {
+        evaluaciones: {
+          id: 'ASC',
+        }
+      }
     });
 
     return miembros;
   }
 
   async obtenerEstadisticas(options: {
+    zona?: number;
     requisito?: number;
-    competencia?: number;
+    resultado?: boolean;
   }) {
     return await this.miembroRepository.count({
       relations: {
         evaluaciones: {
           requisito: true,
-          competencia: true,
         },
       },
       where: {
+        historiales: {
+          zona: {
+            id: options.zona,
+          }
+        },
         evaluaciones: {
           requisito: {
-            requisito_id: options.requisito,
+            id: options.requisito,
           },
-          competencia: {
-            competencia_id: options.competencia,
-          },
+          resultado: options.resultado,
         },
       },
     });
