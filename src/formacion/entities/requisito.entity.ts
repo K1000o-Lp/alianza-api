@@ -12,7 +12,7 @@ import { Evaluacion } from './evaluacion.entity';
 @Entity({ schema: 'formacion', name: 'requisitos' })
 export class Requisito {
   @PrimaryGeneratedColumn()
-  requisito_id: number;
+  id: number;
 
   @Column()
   nombre: string;
@@ -24,12 +24,12 @@ export class Requisito {
   @JoinTable({
     name: 'formaciones_requisitos',
     joinColumn: {
-      name: 'requisito_fk_id',
-      referencedColumnName: 'requisito_id',
+      name: 'requisito_id',
+      referencedColumnName: 'id',
     },
     inverseJoinColumn: {
-      name: 'formacion_fk_id',
-      referencedColumnName: 'formacion_id',
+      name: 'formacion_id',
+      referencedColumnName: 'id',
     },
   })
   formaciones: Formacion[];

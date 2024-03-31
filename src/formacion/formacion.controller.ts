@@ -1,22 +1,36 @@
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put } from '@nestjs/common';
 import { FormacionService } from './formacion.service';
+import { actualizarEvaluacionDto, crearEventoDto } from './dtos';
 
 @Controller('formacion')
 export class FormacionController {
   constructor(private formacionService: FormacionService) {}
 
   @Get('formaciones')
-  async obtenerFormaciones() {
-    return await this.formacionService.obtenerFormaciones();
+  obtenerFormaciones() {
+    return this.formacionService.obtenerFormaciones();
   }
 
   @Get('requisitos')
-  async obtenerRequisitos() {
-    return await this.formacionService.obtenerRequisitos();
+  obtenerRequisitos() {
+    return this.formacionService.obtenerRequisitos();
   }
 
-  @Get('competencias')
-  async obtenerCompetencias() {
-    return await this.formacionService.obtenerCompetencias();
+  @Put('evaluaciones')
+  actualizarEvaluaciones(
+    @Body()
+    actualizarEvaluacionesDto: actualizarEvaluacionDto[],
+  ) {
+    return this.formacionService.actualizarEvaluaciones(
+      actualizarEvaluacionesDto,
+    );
+  }
+
+  @Post('eventos')
+  crearEventos(
+    @Body()
+    crearEventoDto: crearEventoDto,
+  ) {
+    return this.formacionService.crearEvento(crearEventoDto);
   }
 }

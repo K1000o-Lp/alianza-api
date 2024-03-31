@@ -3,6 +3,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PersonaModule } from './persona/persona.module';
 import { FormacionModule } from './formacion/formacion.module';
 import { OrganizacionModule } from './organizacion/organizacion.module';
+import { AuthModule } from './auth/auth.module';
+import { UsuariosModule } from './usuarios/usuarios.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { OrganizacionModule } from './organizacion/organizacion.module';
     OrganizacionModule,
     PersonaModule,
     FormacionModule,
+    UsuariosModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [],

@@ -6,12 +6,12 @@ export class OrganizacionController {
   constructor(private organizacionService: OrganizacionService) {}
 
   @Get('zonas')
-  async obtenerZonas() {
-    return await this.organizacionService.obtenerZonas();
+  obtenerZonas() {
+    return this.organizacionService.obtenerZonas();
   }
 
   @Get('servicios')
-  async obtenerServicios() {
-    return await this.organizacionService.obtenerServicios();
+  obtenerServicios() {
+    return this.organizacionService.obtenerServicios();
   }
 }
