@@ -4,7 +4,7 @@ import { Miembro } from './miembro.entity';
 @Entity({ schema: 'persona', name: 'ocupaciones' })
 export class Ocupacion {
   @PrimaryGeneratedColumn()
-  ocupacion_id: number;
+  id: number;
 
   @Column()
   descripcion: string;
