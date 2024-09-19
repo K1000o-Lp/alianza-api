@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import {
   Asistencia,
   Evaluacion,
@@ -28,6 +28,7 @@ export class FormacionService {
     private eventoRepository: Repository<Evento>,
     @InjectRepository(Asistencia)
     private asistenciaRepository: Repository<Asistencia>,
+    private dataSource: DataSource
   ) {}
 
   async obtenerFormaciones(): Promise<Formacion[]> {
@@ -128,15 +129,19 @@ export class FormacionService {
       }),
     );
 
-    /*const evaluaciones = requisitos.map((requisito) => {
-      const evaluacion = new Evaluacion();
-      evaluacion.requisito = requisito;
-      evaluacion.competencia = competencia;
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-      return evaluacion;
-    });*/
-
-    await this.evaluacionRepository.save(evaluaciones);
+    try {
+      await queryRunner.manager.save(evaluaciones);
+      await queryRunner.commitTransaction();
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      return null;
+    } finally {
+      await queryRunner.release();
+    }
 
     return evaluaciones;
   }

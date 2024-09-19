@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   Discapacidad,
@@ -7,7 +7,7 @@ import {
   Miembro,
   Ocupacion,
 } from './entities';
-import { Repository, getManager } from 'typeorm';
+import { DataSource, Repository, Transaction, getManager } from 'typeorm';
 import { CrearMiembroDto } from './dtos/crear-miembro.dto';
 import { FormacionService } from 'src/formacion/formacion.service';
 import { OrganizacionService } from 'src/organizacion/organizacion.service';
@@ -26,6 +26,7 @@ export class PersonaService {
     @InjectRepository(Miembro) private miembroRepository: Repository<Miembro>,
     private formacionService: FormacionService,
     private organizacionService: OrganizacionService,
+    private dataSource: DataSource
   ) {}
 
   async obtenerDiscapacidades(): Promise<Discapacidad[]> {
@@ -77,6 +78,10 @@ export class PersonaService {
     const historialMiembro =
       await this.organizacionService.crearHistorialMiembro(historial);
 
+    if(!evaluaciones || !historialMiembro) {
+      throw new HttpException('Error al crear miembro. Por favor, intente mas tarde', HttpStatus.BAD_REQUEST);
+    }
+
     const miembro = this.miembroRepository.create({
       cedula: data.cedula ? data.cedula : null,
       nombre_completo: data.nombre_completo,
@@ -99,7 +104,20 @@ export class PersonaService {
       historiales:  [ historialMiembro ],
     });
 
-    await this.miembroRepository.save(miembro);
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      await queryRunner.manager.save(miembro);
+      await queryRunner.commitTransaction();
+    } catch(err) {
+      await queryRunner.rollbackTransaction();
+      throw new HttpException('Error al crear miembro. Por favor, intente mas tarde', HttpStatus.BAD_REQUEST);
+    } finally {
+      await queryRunner.release();
+    }
 
     return miembro;
   }

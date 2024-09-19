@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { HistorialMiembro, Servicio, Zona } from './entities';
 import { crearHistorialMiembroDto } from './dtos/crear-historial-miembro.dto';
 
@@ -12,6 +12,7 @@ export class OrganizacionService {
     private servicioRepository: Repository<Servicio>,
     @InjectRepository(HistorialMiembro)
     private historialMiembroRepository: Repository<HistorialMiembro>,
+    private dataSource: DataSource
   ) {}
 
   async obtenerZonas(): Promise<Zona[]> {
@@ -32,7 +33,19 @@ export class OrganizacionService {
       zona: { id: data.zona_id },
     });
 
-    await this.historialMiembroRepository.save(historialMiembro);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      await queryRunner.manager.save(historialMiembro);
+      await queryRunner.commitTransaction();
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      return null;
+    } finally {
+      await queryRunner.release();
+    }
 
     return historialMiembro;
   }
