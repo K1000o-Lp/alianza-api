@@ -72,15 +72,17 @@ export class PersonaService {
   async crearMiembro(dto: CrearMiembroDto): Promise<Miembro> {
     const { historial, ...data } = dto;
 
+    const miembroExiste = this.verificarSiMiembroExiste({ cedula: data.cedula, nombre_completo: data.nombre_completo });
+
+    if(miembroExiste) {
+      throw new HttpException('Ya existe un miembro con la misma cedula o nombre completo', HttpStatus.BAD_REQUEST);
+    }
+
     const evaluaciones =
       await this.formacionService.crearEvaluacionesPorDefecto();
 
     const historialMiembro =
       await this.organizacionService.crearHistorialMiembro(historial);
-
-    if(!evaluaciones || !historialMiembro) {
-      throw new HttpException('Error al crear miembro. Por favor, intente mas tarde', HttpStatus.BAD_REQUEST);
-    }
 
     const miembro = this.miembroRepository.create({
       cedula: data.cedula ? data.cedula : null,
@@ -114,7 +116,7 @@ export class PersonaService {
       await queryRunner.commitTransaction();
     } catch(err) {
       await queryRunner.rollbackTransaction();
-      throw new HttpException('Error al crear miembro. Por favor, intente mas tarde', HttpStatus.BAD_REQUEST);
+      throw new HttpException('Error al crear miembro. Por favor, intente mas tarde', HttpStatus.INTERNAL_SERVER_ERROR);
     } finally {
       await queryRunner.release();
     }
@@ -192,5 +194,12 @@ export class PersonaService {
         },
       },
     });
+  }
+
+  async verificarSiMiembroExiste(options: {
+    cedula: string;
+    nombre_completo: string;
+  }): Promise<boolean> {
+    return await this.miembroRepository.existsBy({ ...options });
   }
 }
