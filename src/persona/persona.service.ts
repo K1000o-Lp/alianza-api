@@ -72,7 +72,9 @@ export class PersonaService {
   async crearMiembro(dto: CrearMiembroDto): Promise<Miembro> {
     const { historial, ...data } = dto;
 
-    const miembroExiste = this.verificarSiMiembroExiste({ cedula: data.cedula, nombre_completo: data.nombre_completo });
+    const miembroExiste = await this.verificarSiMiembroExiste({ cedula: data.cedula, nombre_completo: data.nombre_completo });
+
+    console.log(miembroExiste);
 
     if(miembroExiste) {
       throw new HttpException('Ya existe un miembro con la misma cedula o nombre completo', HttpStatus.BAD_REQUEST);
@@ -200,6 +202,6 @@ export class PersonaService {
     cedula: string;
     nombre_completo: string;
   }): Promise<boolean> {
-    return await this.miembroRepository.existsBy({ ...options });
+    return await this.miembroRepository.existsBy([{ cedula: options.cedula }, { nombre_completo: options.nombre_completo }]);
   }
 }
