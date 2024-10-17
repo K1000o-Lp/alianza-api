@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, Res } from '@nestjs/common';
 import { PersonaService } from './persona.service';
 import { CrearMiembroDto } from './dtos/crear-miembro.dto';
 import {
@@ -39,6 +39,14 @@ export class PersonaController {
     @Body() dto: CrearMiembroDto,
   ): Promise<Miembro> {
     return this.personaService.crearMiembro(dto);
+  }
+
+  @Put('miembros/:id')
+  actualizarMiembro(
+    @Param('id') id: string,
+    @Body() dto: CrearMiembroDto,
+  ): Promise<Miembro> {
+    return this.personaService.actualizarMiembro(dto, Number(id));
   }
 
   @Get('miembros')
