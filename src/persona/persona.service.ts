@@ -126,6 +126,55 @@ export class PersonaService {
     return miembro;
   }
 
+  async actualizarMiembro(dto: Partial<CrearMiembroDto>, id: number): Promise<Miembro> {
+    const { historial, ...data } = dto;
+
+    const miembro = await this.miembroRepository.findOne({ 
+      relations: {
+        estado_civil: true,
+        educacion: true,
+        ocupacion: true,
+        discapacidad: true,
+        historiales: true,
+      }, where: { id } });
+
+    if(!miembro) {
+      throw new HttpException('Miembro no encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    const nuevoHistorialMiembro = await this.organizacionService.actualizarHistorialMiembro(historial, id);
+
+    miembro.cedula = data.cedula ? data.cedula : miembro.cedula;
+    miembro.nombre_completo = data.nombre_completo ? data.nombre_completo : miembro.nombre_completo;
+    miembro.telefono = data.telefono ? data.telefono : miembro.telefono;
+    miembro.fecha_nacimiento = data.fecha_nacimiento ? data.fecha_nacimiento : miembro.fecha_nacimiento;
+    miembro.hijos = data.hijos ? data.hijos : miembro.hijos;
+    miembro.educacion.id = data.educacion_id ? data.educacion_id : miembro.educacion.id;
+    miembro.estado_civil.id = data.estado_civil_id ? data.estado_civil_id : miembro.estado_civil.id;
+    miembro.ocupacion.id = data.ocupacion_id ? data.ocupacion_id : miembro.ocupacion.id;
+    miembro.discapacidad.id = data.discapacidad_id ? data.discapacidad_id : miembro.discapacidad.id;
+    
+    if(nuevoHistorialMiembro) {
+      miembro.historiales.push(nuevoHistorialMiembro);
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      await queryRunner.manager.save(miembro);
+      await queryRunner.commitTransaction();
+    } catch(err) {
+      await queryRunner.rollbackTransaction();
+      throw new HttpException('Error al actualizar miembro. Por favor, intente mas tarde', HttpStatus.INTERNAL_SERVER_ERROR);
+    }  finally {
+      await queryRunner.release();
+    }
+
+    return miembro;
+  }
+
   async obtenerMiembros(options: {
     id?: number;
     cedula?: string;
@@ -136,8 +185,13 @@ export class PersonaService {
   }): Promise<Miembro[]> {
     const miembros = await this.miembroRepository.find({
       relations: {
+        estado_civil: true,
+        ocupacion: true,
+        educacion: true,
+        discapacidad: true,
         historiales: {
           servicio: true,
+          zona: true, 
         },
         evaluaciones: {
           requisito: true,
@@ -153,6 +207,7 @@ export class PersonaService {
           resultado: options?.resultado
         },
         historiales: {
+          fecha_finalizacion: null,
           servicio: {
             id: options?.rol,
           },
