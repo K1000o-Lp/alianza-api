@@ -1,6 +1,6 @@
+import { Column, Entity, Index, JoinColumn, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Zona } from "src/organizacion/entities";
 import { Miembro } from "src/persona/entities";
-import { Column, Entity, Index, JoinColumn, OneToOne, PrimaryGeneratedColumn } from "typeorm";
 
 
 @Entity({ schema: 'seguridad', name: 'usuarios' })

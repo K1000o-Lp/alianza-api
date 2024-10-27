@@ -6,8 +6,8 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Formacion } from './formacion.entity';
-import { Evaluacion } from './evaluacion.entity';
+
+import { Formacion, Resultado } from '.';
 
 @Entity({ schema: 'formacion', name: 'requisitos' })
 export class Requisito {
@@ -33,7 +33,7 @@ export class Requisito {
     },
   })
   formaciones: Formacion[];
-
-  @OneToMany(() => Evaluacion, (evaluacion) => evaluacion.requisito)
-  evaluaciones: Evaluacion[];
+  
+  @OneToMany(() => Resultado, (resultado) => resultado.requisito)
+  resultados: Resultado[];
 }

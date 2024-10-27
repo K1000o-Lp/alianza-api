@@ -11,14 +11,11 @@ import {
   Timestamp,
   UpdateDateColumn,
 } from 'typeorm';
-import { EstadoCivil } from './estado-civil.entity';
-import { Educacion } from './educacion.entity';
-import { Discapacidad } from './discapacidad.entity';
-import { Evaluacion } from 'src/formacion/entities/evaluacion.entity';
-import { Ocupacion } from './ocupacion.entity';
-import { HistorialMiembro } from 'src/organizacion/entities/historial-miembro.entity';
-import { Asistencia } from 'src/formacion/entities/asistencia.entity';
+
+import { EstadoCivil, Educacion, Ocupacion, Discapacidad } from '.';
 import { Usuario } from 'src/usuarios/entities';
+import { HistorialMiembro } from 'src/organizacion/entities';
+import { Resultado, Asistencia } from 'src/formacion/entities';
 
 @Entity({ schema: 'persona', name: 'miembros' })
 export class Miembro {
@@ -56,8 +53,8 @@ export class Miembro {
   @JoinColumn({ name: 'discapacidad_id' })
   discapacidad: Discapacidad;
 
-  @OneToMany(() => Evaluacion, (evaluacion) => evaluacion.miembro)
-  evaluaciones: Evaluacion[];
+  @OneToMany(() => Resultado, (resultado) => resultado.miembro)
+  resultados: Resultado[];
 
   @OneToMany(
     () => HistorialMiembro,

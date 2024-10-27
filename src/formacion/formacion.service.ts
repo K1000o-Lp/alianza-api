@@ -3,17 +3,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import {
   Asistencia,
-  Evaluacion,
   Evento,
   Formacion,
   Requisito,
+  Resultado,
 } from './entities';
 import {
-  actualizarEvaluacionDto,
   crearAsistenciaDto,
   crearEventoDto,
+  crearResultadoDto,
 } from './dtos';
-import { crearAsistenciasDto } from './dtos/crear-asistencias-dto';
+import { crearAsistenciasDto } from './dtos/crear-asistencias.dto';
+import { Miembro } from 'src/persona/entities';
 
 @Injectable()
 export class FormacionService {
@@ -22,8 +23,8 @@ export class FormacionService {
     private formacionRepository: Repository<Formacion>,
     @InjectRepository(Requisito)
     private requisitoRepository: Repository<Requisito>,
-    @InjectRepository(Evaluacion)
-    private evaluacionRepository: Repository<Evaluacion>,
+    @InjectRepository(Resultado)
+    private resultadoRepository: Repository<Resultado>,
     @InjectRepository(Evento)
     private eventoRepository: Repository<Evento>,
     @InjectRepository(Asistencia)
@@ -35,8 +36,17 @@ export class FormacionService {
     return await this.formacionRepository.find();
   }
 
-  async obtenerRequisitos(): Promise<Requisito[]> {
-    return await this.requisitoRepository.find();
+  async obtenerRequisitos(options: {
+    requisitos?: string;
+  }): Promise<Requisito[]> {
+    const queryBuilder = this.requisitoRepository.createQueryBuilder('requisito');
+
+    if(options.requisitos) {
+      const requisitos = options.requisitos.split(',').map(requisito => Number(requisito));
+      queryBuilder.where('requisito.id NOT IN (:...requisitos)', { requisitos });
+    }
+
+    return await queryBuilder.getMany();
   }
 
   async obtenerEvento(options: { zona?: number }): Promise<Evento[]> {
@@ -58,8 +68,8 @@ export class FormacionService {
     });
   }
 
-  async crearEvento(crearEventoDto: crearEventoDto): Promise<Evento> {
-    const { zona_id, nombre, descripcion } = crearEventoDto;
+  async crearEvento(dto: crearEventoDto): Promise<Evento> {
+    const { zona_id, nombre, descripcion } = dto;
 
     const evento = this.eventoRepository.create({
       nombre,
@@ -117,16 +127,19 @@ export class FormacionService {
     return asistencias;
   }
 
-  async crearEvaluacionesPorDefecto(): Promise<Evaluacion[] | null> {
-    const requisitos = await this.obtenerRequisitos();
+  async crearResultado(dto: crearResultadoDto): Promise<Resultado | null> {
+    const requisito = await this.requisitoRepository.findOne({ where: { id: dto.requisito_id } });
 
-    const evaluaciones = this.evaluacionRepository.create(
-      requisitos.map((requisito) => {
-        return {
-          requisito: requisito,
-          resultado: false,
-        };
-      }),
+    if(!requisito) {
+      throw new HttpException('Requisito no encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    const resultado = this.resultadoRepository.create(
+      {
+        miembro: { id: dto.miembro_id },
+        requisito,
+        creado_en: dto.fecha_consolidacion,
+      }
     );
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -134,47 +147,15 @@ export class FormacionService {
     await queryRunner.startTransaction();
 
     try {
-      await queryRunner.manager.save(evaluaciones);
+      await queryRunner.manager.save(resultado);
       await queryRunner.commitTransaction();
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      throw new HttpException('Error al crear miembro. Por favor, intente mas tarde', HttpStatus.INTERNAL_SERVER_ERROR);
+      throw new HttpException(err.detail, HttpStatus.INTERNAL_SERVER_ERROR);
     } finally {
       await queryRunner.release();
     }
 
-    return evaluaciones;
-  }
-
-  async actualizarEvaluaciones(
-    evaluaciones: actualizarEvaluacionDto[],
-  ): Promise<Evaluacion[]> {
-    if (!Array.isArray(evaluaciones)) {
-      throw new TypeError();
-    }
-
-    const evaluacionesActualizadas = await Promise.all(
-      evaluaciones.map(async (evaluacion: actualizarEvaluacionDto) => {
-        await this.evaluacionRepository.update(
-          {
-            id: evaluacion.id,
-          },
-          { resultado: evaluacion.resultado },
-        );
-
-        const evaluacionActualizada = await this.evaluacionRepository.findOne({
-          relations: {
-            requisito: true,
-          },
-          where: {
-            id: evaluacion.id,
-          },
-        });
-
-        return evaluacionActualizada;
-      }),
-    );
-
-    return evaluacionesActualizadas;
+    return resultado;
   }
 }
