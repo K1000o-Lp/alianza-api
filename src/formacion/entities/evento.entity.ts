@@ -7,7 +7,8 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { Asistencia } from './asistencia.entity';
+
+import { Asistencia } from '.';
 
 @Entity({ schema: 'formacion', name: 'eventos' })
 export class Evento {

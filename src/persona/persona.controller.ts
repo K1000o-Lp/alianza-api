@@ -59,6 +59,8 @@ export class PersonaController {
       rol?: number;
       requisito?: number;
       competencia?: number;
+      results_since?: Date;
+      results_until?: Date;
     },
   ): Promise<Miembro[]> {
     return this.personaService.obtenerMiembros(options);

@@ -7,7 +7,8 @@ import {
   PrimaryGeneratedColumn,
   Timestamp,
 } from 'typeorm';
-import { Evento } from './evento.entity';
+
+import { Evento } from '.';
 
 @Entity({ schema: 'formacion', name: 'asistencias' })
 export class Asistencia {

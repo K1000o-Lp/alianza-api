@@ -1,5 +1,6 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { HistorialMiembro } from './historial-miembro.entity';
+
+import { HistorialMiembro } from '.';
 
 @Entity({ schema: 'organizacion', name: 'servicios' })
 export class Servicio {

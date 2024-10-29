@@ -26,5 +26,6 @@ import { OrganizacionModule } from 'src/organizacion/organizacion.module';
   ],
   controllers: [PersonaController],
   providers: [PersonaService],
+  exports: [PersonaService],
 })
 export class PersonaModule {}

@@ -8,8 +8,8 @@ import {
   PrimaryGeneratedColumn,
   Timestamp,
 } from 'typeorm';
-import { Servicio } from './servicio.entity';
-import { Zona } from './zona.entity';
+
+import { Zona, Servicio } from '.';
 
 @Entity({ schema: 'organizacion', name: 'historial_miembros' })
 export class HistorialMiembro {

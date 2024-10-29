@@ -1,5 +1,5 @@
 import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { Requisito } from './requisito.entity';
+import { Requisito } from '.';
 
 @Entity({ schema: 'formacion', name: 'formaciones' })
 export class Formacion {

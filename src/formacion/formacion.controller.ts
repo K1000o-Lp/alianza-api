@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Post, Put } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { FormacionService } from './formacion.service';
-import { actualizarEvaluacionDto, crearEventoDto } from './dtos';
+import { crearEventoDto, crearResultadoDto } from './dtos';
 
 @Controller('formacion')
 export class FormacionController {
@@ -12,18 +12,21 @@ export class FormacionController {
   }
 
   @Get('requisitos')
-  obtenerRequisitos() {
-    return this.formacionService.obtenerRequisitos();
+  obtenerRequisitos(
+    @Query()
+    options: {
+      requisitos?: string;
+    },
+  ) {
+    return this.formacionService.obtenerRequisitos(options);
   }
 
-  @Put('evaluaciones')
-  actualizarEvaluaciones(
+  @Post('resultados')
+  crearResultado(
     @Body()
-    actualizarEvaluacionesDto: actualizarEvaluacionDto[],
+    dto: crearResultadoDto,
   ) {
-    return this.formacionService.actualizarEvaluaciones(
-      actualizarEvaluacionesDto,
-    );
+    return this.formacionService.crearResultado(dto);
   }
 
   @Post('eventos')
