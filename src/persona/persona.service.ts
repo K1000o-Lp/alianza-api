@@ -7,7 +7,7 @@ import {
   Miembro,
   Ocupacion,
 } from './entities';
-import { DataSource, Repository, Transaction, getManager } from 'typeorm';
+import { Between, DataSource, Repository } from 'typeorm';
 import { CrearMiembroDto } from './dtos/crear-miembro.dto';
 import { FormacionService } from 'src/formacion/formacion.service';
 import { OrganizacionService } from 'src/organizacion/organizacion.service';
@@ -175,7 +175,32 @@ export class PersonaService {
     zona?: number;
     rol?: number;
     requisito?: number;
+    results_since?: Date;
+    results_until?: Date;
   }): Promise<Miembro[]> {
+    const whereClause: any = {
+      id: options?.id,
+        cedula: options?.cedula,
+        resultados: {
+          requisito: {
+            id: options?.requisito,
+          },
+        },
+        historiales: {
+          fecha_finalizacion: null,
+          servicio: {
+            id: options?.rol,
+          },
+          zona: {
+            id: options?.zona,
+          },
+        },
+    };
+
+    if(options?.results_since && options?.results_until) {
+      whereClause.resultados.creado_en = Between(options?.results_since, options?.results_until);
+    }
+
     const miembros = await this.miembroRepository.find({
       relations: {
         estado_civil: true,
@@ -190,24 +215,7 @@ export class PersonaService {
           requisito: true,
         }
       },
-      where: {
-        id: options?.id,
-        cedula: options?.cedula,
-        resultados: {
-          requisito: {
-            id: options?.requisito
-          },
-        },
-        historiales: {
-          fecha_finalizacion: null,
-          servicio: {
-            id: options?.rol,
-          },
-          zona: {
-            id: options?.zona,
-          },
-        },
-      },
+      where: whereClause,
       order: {
         resultados: {
           id: 'ASC',
@@ -222,17 +230,32 @@ export class PersonaService {
     zona?: number;
     requisito?: number;
   }) {
-    const queryBuilder = this.miembroRepository
-      .createQueryBuilder('m')
-      .innerJoin('m.historiales', 'h')
-      .where('h.zona_id = :zona', { zona: options?.zona })
-      .andWhere('h.fecha_finalizacion IS NULL');
+    // const queryBuilder = this.miembroRepository
+    //   .createQueryBuilder('m')
+    //   .innerJoin('m.historiales', 'h')
+    //   .where('h.zona_id = :zona', { zona: options?.zona })
+    //   .andWhere('h.fecha_finalizacion IS NULL');
 
-    if (options?.requisito) {
-      queryBuilder.andWhere('m.id IN (SELECT r.miembro_id FROM formacion.resultados r WHERE r.requisito_id = :requisito)', { requisito: options.requisito });
-    }
+    // if (options?.requisito) {
+    //   queryBuilder.andWhere('m.id IN (SELECT r.miembro_id FROM formacion.resultados r WHERE r.requisito_id = :requisito)', { requisito: options.requisito });
+    // }
 
-    return await queryBuilder.getCount();
+    // return await queryBuilder.getCount();
+
+    return await this.miembroRepository.count({
+      where: {
+        historiales: {
+          zona: {
+            id: options?.zona,
+          }
+        },
+        resultados: {
+          requisito: {
+            id: options?.requisito,
+          },
+        },
+      },
+    });
   }
 
   async verificarSiMiembroExiste(options: {
