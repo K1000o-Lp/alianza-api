@@ -53,10 +53,11 @@ export class PersonaController {
   filtrarMiembros(
     @Query()
     options: {
-      id?: number;
+      id?: number;  
       cedula?: string;
       zona?: number;
       rol?: number;
+      no_completado?: string;
       requisito?: number;
       competencia?: number;
       results_since?: Date;

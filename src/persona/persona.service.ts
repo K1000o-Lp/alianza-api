@@ -7,7 +7,7 @@ import {
   Miembro,
   Ocupacion,
 } from './entities';
-import { Between, DataSource, Repository } from 'typeorm';
+import { Between, DataSource, In, Not, Repository } from 'typeorm';
 import { CrearMiembroDto } from './dtos/crear-miembro.dto';
 import { FormacionService } from 'src/formacion/formacion.service';
 import { OrganizacionService } from 'src/organizacion/organizacion.service';
@@ -174,10 +174,13 @@ export class PersonaService {
     cedula?: string;
     zona?: number;
     rol?: number;
+    no_completado?: string;
     requisito?: number;
     results_since?: Date;
     results_until?: Date;
   }): Promise<Miembro[]> {
+    const noCompletado = options?.no_completado === 'true' ? true : false;
+
     const whereClause: any = {
       id: options?.id,
         cedula: options?.cedula,
@@ -201,6 +204,22 @@ export class PersonaService {
       whereClause.resultados.creado_en = Between(options?.results_since, options?.results_until);
     }
 
+    if (options?.requisito && noCompletado) {
+      const membersWithRequirement = await this.miembroRepository
+      .createQueryBuilder('miembro')
+      .innerJoin('miembro.resultados', 'resultado')
+      .innerJoin('resultado.requisito', 'requisito')
+      .where('requisito.id = :requisitoId', { requisitoId: options?.requisito })
+      .select('miembro.id')
+      .getRawMany();
+
+      delete whereClause.resultados;
+      
+      whereClause.id = Not(In(
+        membersWithRequirement.map(({ miembro_id }) => miembro_id)
+      ));
+    }
+
     const miembros = await this.miembroRepository.find({
       relations: {
         estado_civil: true,
@@ -217,9 +236,10 @@ export class PersonaService {
       },
       where: whereClause,
       order: {
+        id: 'ASC',
         resultados: {
-          id: 'ASC',
-        }
+          creado_en: 'DESC',
+        },
       }
     });
 
