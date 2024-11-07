@@ -195,7 +195,7 @@ export class PersonaService {
             id: options?.rol,
           },
           zona: {
-            id: options?.zona,
+            id: options?.zona?.toString() === "1000" ? null : options?.zona,
           },
         },
     };
