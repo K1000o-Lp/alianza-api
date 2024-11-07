@@ -179,7 +179,6 @@ export class PersonaService {
     results_since?: Date;
     results_until?: Date;
   }): Promise<Miembro[]> {
-    console.log(options.zona, typeof options.zona);
     const noCompletado = options?.no_completado === 'true' ? true : false;
 
     const whereClause: any = {
