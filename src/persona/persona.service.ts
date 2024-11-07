@@ -179,6 +179,7 @@ export class PersonaService {
     results_since?: Date;
     results_until?: Date;
   }): Promise<Miembro[]> {
+    console.log(options.zona, typeof options.zona);
     const noCompletado = options?.no_completado === 'true' ? true : false;
 
     const whereClause: any = {
@@ -195,7 +196,7 @@ export class PersonaService {
             id: options?.rol,
           },
           zona: {
-            id: options?.zona,
+            id: options?.zona?.toString() === "1000" ? null : options?.zona,
           },
         },
     };
