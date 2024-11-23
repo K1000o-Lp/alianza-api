@@ -195,11 +195,17 @@ export class PersonaService {
           servicio: {
             id: options?.rol,
           },
-          zona: {
-            id: options?.zona?.toString() === "1000" ? null : options?.zona,
-          },
+          zona:{
+            id: options?.zona == 1000 ? null : options?.zona
+          }
         },
     };
+
+    if (options?.zona == 1000) {
+      whereClause.historiales.zona.id = Not(13);
+    } else if (options?.zona != 13) {
+      whereClause.historiales.zona.id = options?.zona;
+    }
 
     if(options?.results_since && options?.results_until) {
       whereClause.resultados.creado_en = Between(options?.results_since, options?.results_until);
@@ -291,32 +297,24 @@ export class PersonaService {
     zona?: number;
     requisito?: number;
   }) {
-    // const queryBuilder = this.miembroRepository
-    //   .createQueryBuilder('m')
-    //   .innerJoin('m.historiales', 'h')
-    //   .where('h.zona_id = :zona', { zona: options?.zona })
-    //   .andWhere('h.fecha_finalizacion IS NULL');
+    const queryBuilder = this.miembroRepository
+      .createQueryBuilder('m')
 
-    // if (options?.requisito) {
-    //   queryBuilder.andWhere('m.id IN (SELECT r.miembro_id FROM formacion.resultados r WHERE r.requisito_id = :requisito)', { requisito: options.requisito });
-    // }
+    if(options.zona) {
+      queryBuilder.innerJoin('m.historiales', 'h')
+      .where('h.zona_id = :zona', { zona: options?.zona })
+      .andWhere('h.fecha_finalizacion IS NULL');
+    } else {
+      queryBuilder.innerJoin('m.historiales', 'h')
+      .where('h.zona_id != 13')
+      .andWhere('h.fecha_finalizacion IS NULL');
+    }
 
-    // return await queryBuilder.getCount();
+    if (options?.requisito) {
+      queryBuilder.andWhere('m.id IN (SELECT r.miembro_id FROM formacion.resultados r WHERE r.requisito_id = :requisito)', { requisito: options.requisito });
+    }
 
-    return await this.miembroRepository.count({
-      where: {
-        historiales: {
-          zona: {
-            id: options?.zona,
-          }
-        },
-        resultados: {
-          requisito: {
-            id: options?.requisito,
-          },
-        },
-      },
-    });
+    return await queryBuilder.getCount();
   }
 
   async verificarSiMiembroExiste(options: {
