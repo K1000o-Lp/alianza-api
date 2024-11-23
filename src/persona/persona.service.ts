@@ -202,8 +202,8 @@ export class PersonaService {
     };
 
     if (options?.zona == 1000) {
-      whereClause.historiales.zona.id = Not(13);
-    } else if (options?.zona != 13) {
+      whereClause.historiales.zona.id = Not(12);
+    } else if (options?.zona != 12) {
       whereClause.historiales.zona.id = options?.zona;
     }
 
@@ -306,7 +306,7 @@ export class PersonaService {
       .andWhere('h.fecha_finalizacion IS NULL');
     } else {
       queryBuilder.innerJoin('m.historiales', 'h')
-      .where('h.zona_id != 13')
+      .where('h.zona_id != 12')
       .andWhere('h.fecha_finalizacion IS NULL');
     }
 
