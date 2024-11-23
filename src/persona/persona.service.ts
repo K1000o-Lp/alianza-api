@@ -179,6 +179,7 @@ export class PersonaService {
     results_since?: Date;
     results_until?: Date;
   }): Promise<Miembro[]> {
+    const requisitoOrder = options?.id ? 'ASC' : 'DESC';
     const noCompletado = options?.no_completado === 'true' ? true : false;
 
     const whereClause: any = {
@@ -213,11 +214,49 @@ export class PersonaService {
       .select('miembro.id')
       .getRawMany();
 
-      delete whereClause.resultados;
-      
       whereClause.id = Not(In(
         membersWithRequirement.map(({ miembro_id }) => miembro_id)
       ));
+    }
+
+    // Para hacer bautismo (requisito 3) o encuentro de oracion (requisito 4) deben haber completado primeros pasos (requisito 2)
+    // if((options?.requisito == 3 || options.requisito == 4) && noCompletado) {
+    //   whereClause.resultados.requisito.id = 2;
+    // }
+
+    // Para hacer pos encuentro (requisito 5) deben haber hecho encuentro de oracion (4)
+    if(options?.requisito == 5 && noCompletado) {
+      whereClause.resultados.requisito.id = 4;
+    }
+
+    // Para hacer doctrinas 1 (requisito 6) deben haber hecho pos encuentro (5)
+    if(options?.requisito == 6 && noCompletado) {
+      whereClause.resultados.requisito.id = 5;
+    }
+
+    // Para hacer doctrinas 2 (requisito 7) deben haber hecho doctrinas 1 (6)
+    if(options?.requisito == 7 && noCompletado) {
+      whereClause.resultados.requisito.id = 6;
+    }
+
+    // Para hacer entt de liderazgo (requisito 8) deben haber hecho doctrinas 2 (7)
+    if(options?.requisito == 8 && noCompletado) {
+      whereClause.resultados.requisito.id = 7;
+    }
+
+    // Para hacer liderazgo (requisito 9) deben haber hecho doctrinas 2 (7)
+    if(options?.requisito == 9 && noCompletado) {
+      whereClause.resultados.requisito.id = 7;
+    }
+
+    // Para hacer encuentro de oracion (requisito 10) deben haber hecho liderazgo (requisito 9)
+    if(options?.requisito == 10 && noCompletado) {
+      whereClause.resultados.requisito.id = 9;
+    }
+
+    // Para hacer lider (requisito 11) deben haber hecho encuentro de oracion (requisito 10)
+    if(options?.requisito == 11 && noCompletado) {
+      whereClause.resultados.requisito.id = 10;
     }
 
     const miembros = await this.miembroRepository.find({
@@ -238,7 +277,9 @@ export class PersonaService {
       order: {
         id: 'ASC',
         resultados: {
-          creado_en: 'DESC',
+          requisito: {
+            id: requisitoOrder,
+          },
         },
       }
     });
