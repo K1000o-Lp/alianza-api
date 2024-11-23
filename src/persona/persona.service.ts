@@ -225,32 +225,32 @@ export class PersonaService {
       ));
     }
 
-    // Para hacer bautismo (requisito 3) o encuentro de oracion (requisito 4) deben haber completado primeros pasos (requisito 2)
+    // Para hacer bautismo (requisito 3) o encuentro (requisito 4) deben haber completado primeros pasos (requisito 2)
     // if((options?.requisito == 3 || options.requisito == 4) && noCompletado) {
     //   whereClause.resultados.requisito.id = 2;
     // }
 
-    // Para hacer pos encuentro (requisito 5) deben haber hecho encuentro de oracion (4)
+    // Para hacer pos encuentro (requisito 5) deben haber hecho encuentro (requisito 4)
     if(options?.requisito == 5 && noCompletado) {
       whereClause.resultados.requisito.id = 4;
     }
 
-    // Para hacer doctrinas 1 (requisito 6) deben haber hecho pos encuentro (5)
+    // Para hacer doctrinas 1 (requisito 6) deben haber hecho pos encuentro (requisito 5)
     if(options?.requisito == 6 && noCompletado) {
       whereClause.resultados.requisito.id = 5;
     }
 
-    // Para hacer doctrinas 2 (requisito 7) deben haber hecho doctrinas 1 (6)
+    // Para hacer doctrinas 2 (requisito 7) deben haber hecho doctrinas 1 (requisito 6)
     if(options?.requisito == 7 && noCompletado) {
       whereClause.resultados.requisito.id = 6;
     }
 
-    // Para hacer entt de liderazgo (requisito 8) deben haber hecho doctrinas 2 (7)
+    // Para hacer entt de liderazgo (requisito 8) deben haber hecho doctrinas 2 (requisito 7)
     if(options?.requisito == 8 && noCompletado) {
       whereClause.resultados.requisito.id = 7;
     }
 
-    // Para hacer liderazgo (requisito 9) deben haber hecho doctrinas 2 (7)
+    // Para hacer liderazgo (requisito 9) deben haber hecho doctrinas 2 (requisito 7)
     if(options?.requisito == 9 && noCompletado) {
       whereClause.resultados.requisito.id = 7;
     }
