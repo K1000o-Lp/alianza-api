@@ -184,28 +184,30 @@ export class PersonaService {
 
     const whereClause: any = {
       id: options?.id,
-        cedula: options?.cedula,
-        resultados: {
-          requisito: {
-            id: options?.requisito,
-          },
+      cedula: options?.cedula,
+      resultados: {
+        requisito: {
+          id: options?.requisito,
         },
-        historiales: {
-          fecha_finalizacion: null,
-          servicio: {
-            id: options?.rol,
-          },
-          zona:{
-            id: options?.zona == 1000 ? null : options?.zona
-          }
+      },
+      historiales: {
+        fecha_finalizacion: null,
+        servicio: {
+          id: options?.rol,
         },
+        zona:{
+          id: options?.zona == 1000 ? undefined : options?.zona
+        }
+      },
     };
-
-    if (options?.zona == 1000) {
-      whereClause.historiales.zona.id = Not(12);
-    } else if (options?.zona != 12) {
+    
+    if (options?.zona != 13) {
       whereClause.historiales.zona.id = options?.zona;
     }
+
+    if (options?.zona == 1000) {
+      whereClause.historiales.zona.id = Not(13);
+    } 
 
     if(options?.results_since && options?.results_until) {
       whereClause.resultados.creado_en = Between(options?.results_since, options?.results_until);
@@ -297,24 +299,38 @@ export class PersonaService {
     zona?: number;
     requisito?: number;
   }) {
-    const queryBuilder = this.miembroRepository
-      .createQueryBuilder('m')
+    // const queryBuilder = this.miembroRepository
+    //   .createQueryBuilder('m')
 
-    if(options.zona) {
-      queryBuilder.innerJoin('m.historiales', 'h')
-      .where('h.zona_id = :zona', { zona: options?.zona })
-      .andWhere('h.fecha_finalizacion IS NULL');
-    } else {
-      queryBuilder.innerJoin('m.historiales', 'h')
-      .where('h.zona_id != 12')
-      .andWhere('h.fecha_finalizacion IS NULL');
+    // if(options.zona) {
+    //   queryBuilder.innerJoin('m.historiales', 'h')
+    //   .where('h.zona_id = :zona', { zona: options?.zona })
+    //   .andWhere('h.fecha_finalizacion IS NULL');
+    // } else {
+    //   queryBuilder.innerJoin('m.historiales', 'h')
+    //   .where('h.zona_id != 13')
+    //   .andWhere('h.fecha_finalizacion IS NULL');
+    // }
+
+    // if (options?.requisito) {
+    //   queryBuilder.andWhere('m.id IN (SELECT r.miembro_id FROM formacion.resultados r WHERE r.requisito_id = :requisito)', { requisito: options.requisito });
+    // }
+
+    const whereClause = {
+      historiales: {
+        fecha_finalizacion: null,
+        zona: {
+          id: options?.zona ? options?.zona : Not(13),
+        }
+      },
+      resultados: {
+        requisito: {
+          id: options?.requisito,
+        }
+      }
     }
 
-    if (options?.requisito) {
-      queryBuilder.andWhere('m.id IN (SELECT r.miembro_id FROM formacion.resultados r WHERE r.requisito_id = :requisito)', { requisito: options.requisito });
-    }
-
-    return await queryBuilder.getCount();
+    return await this.miembroRepository.count({ where: whereClause });
   }
 
   async verificarSiMiembroExiste(options: {
