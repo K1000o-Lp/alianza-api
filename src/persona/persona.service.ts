@@ -201,12 +201,12 @@ export class PersonaService {
       },
     };
     
-    if (options?.zona != 13) {
+    if (options?.zona != 12) {
       whereClause.historiales.zona.id = options?.zona;
     }
 
     if (options?.zona == 1000) {
-      whereClause.historiales.zona.id = Not(13);
+      whereClause.historiales.zona.id = Not(12);
     } 
 
     if(options?.results_since && options?.results_until) {
@@ -320,7 +320,7 @@ export class PersonaService {
       historiales: {
         fecha_finalizacion: null,
         zona: {
-          id: options?.zona ? options?.zona : Not(13),
+          id: options?.zona ? options?.zona : Not(12),
         }
       },
       resultados: {
