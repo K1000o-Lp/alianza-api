@@ -181,6 +181,7 @@ export class PersonaService {
   }): Promise<Miembro[]> {
     const requisitoOrder = options?.id ? 'ASC' : 'DESC';
     const noCompletado = options?.no_completado === 'true' ? true : false;
+    const zona0 = Number(process.env.ZONA_0);
 
     const whereClause: any = {
       id: options?.id,
@@ -201,12 +202,12 @@ export class PersonaService {
       },
     };
     
-    if (options?.zona != 12) {
+    if (options?.zona != zona0) {
       whereClause.historiales.zona.id = options?.zona;
     }
 
     if (options?.zona == 1000) {
-      whereClause.historiales.zona.id = Not(12);
+      whereClause.historiales.zona.id = Not(zona0);
     } 
 
     if(options?.results_since && options?.results_until) {
@@ -301,8 +302,9 @@ export class PersonaService {
     zona?: number;
     requisito?: number;
   }) {
+    const zona0 = Number(process.env.ZONA_0);
     const queryBuilder = this.miembroRepository
-      .createQueryBuilder('m')
+      .createQueryBuilder('m');
 
     if(options.zona) {
       queryBuilder.innerJoin('m.historiales', 'h')
@@ -310,7 +312,7 @@ export class PersonaService {
       .andWhere('h.fecha_finalizacion IS NULL');
     } else {
       queryBuilder.innerJoin('m.historiales', 'h')
-      .where('h.zona_id != 12')
+      .where(`h.zona_id != ${zona0}`)
       .andWhere('h.fecha_finalizacion IS NULL');
     }
 
