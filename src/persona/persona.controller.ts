@@ -74,6 +74,7 @@ export class PersonaController {
     options: {
       zona?: number;
       rol?: number;
+      no_completado?: string;
       requisito?: number;
       competencia?: number;
       results_since?: Date;

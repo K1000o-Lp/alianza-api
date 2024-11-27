@@ -215,6 +215,7 @@ export class PersonaService {
 
     if (options?.requisito && noCompletado) {
       delete whereClause.resultados.requisito.id;
+      delete whereClause.resultados.creado_en;
 
       const membersWithRequirement = await this.miembroRepository
       .createQueryBuilder('miembro')
