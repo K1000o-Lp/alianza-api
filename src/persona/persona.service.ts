@@ -214,6 +214,8 @@ export class PersonaService {
     }
 
     if (options?.requisito && noCompletado) {
+      delete whereClause.resultados.requisito.id;
+
       const membersWithRequirement = await this.miembroRepository
       .createQueryBuilder('miembro')
       .innerJoin('miembro.resultados', 'resultado')
