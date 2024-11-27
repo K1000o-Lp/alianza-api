@@ -9,8 +9,8 @@ import {
 } from './entities';
 import { Between, DataSource, In, Not, Repository } from 'typeorm';
 import { CrearMiembroDto } from './dtos/crear-miembro.dto';
-import { FormacionService } from 'src/formacion/formacion.service';
 import { OrganizacionService } from 'src/organizacion/organizacion.service';
+import { Workbook } from 'exceljs';
 
 @Injectable()
 export class PersonaService {
@@ -24,7 +24,6 @@ export class PersonaService {
     @InjectRepository(Ocupacion)
     private ocupacionRepository: Repository<Ocupacion>,
     @InjectRepository(Miembro) private miembroRepository: Repository<Miembro>,
-    private formacionService: FormacionService,
     private organizacionService: OrganizacionService,
     private dataSource: DataSource
   ) {}
@@ -296,6 +295,76 @@ export class PersonaService {
     });
 
     return miembros;
+  }
+
+  async obtenerReportesExcelTodas(options: {
+    id?: number;
+    cedula?: string;
+    rol?: number;
+    no_completado?: string;
+    requisito?: number;
+    results_since?: Date;
+    results_until?: Date;
+  }): Promise<any> {
+    const zonas = await this.organizacionService.obtenerZonas();
+    const members = await this.obtenerMiembros(options);
+    const workbook = new Workbook();
+    const columns = [
+      { header: 'ID', key: 'id', width: 10 },
+      { header: 'Cédula', key: 'cedula', width: 15 },
+      { header: 'Nombre Completo', key: 'nombre_completo', width: 50 },
+    ];
+    
+    zonas.forEach((zona) => {
+      const worksheet = workbook.addWorksheet(zona.descripcion);
+      worksheet.columns = columns;
+
+      members.forEach((member) => {
+        if (member.historiales[0].zona.id !== zona.id) return;
+
+        worksheet.addRow({
+          id: member.id,
+          cedula: member.cedula,
+          nombre_completo: member.nombre_completo,
+          zona: member.historiales[0].zona.descripcion,
+        });
+      });
+    });
+
+    // Guardar el archivo de Excel
+    return await workbook.xlsx.writeBuffer();
+  }
+
+  async obtenerReportesExcelZona(options: {
+    id?: number;
+    cedula?: string;
+    zona?: number;
+    rol?: number;
+    no_completado?: string;
+    requisito?: number;
+    results_since?: Date;
+    results_until?: Date;
+  }): Promise<any> {
+    const members = await this.obtenerMiembros(options);
+    const workbook = new Workbook();
+    const columns = [
+      { header: 'ID', key: 'id', width: 10 },
+      { header: 'Cédula', key: 'cedula', width: 15 },
+      { header: 'Nombre Completo', key: 'nombre_completo', width: 50 },
+    ];
+    const worksheet = workbook.addWorksheet(members[0].historiales[0].zona.descripcion);
+    worksheet.columns = columns;
+
+    members.forEach((member) => {
+      worksheet.addRow({
+        id: member.id,
+        cedula: member.cedula,
+        nombre_completo: member.nombre_completo,
+      });
+    });
+
+    // Guardar el archivo de Excel
+    return await workbook.xlsx.writeBuffer();
   }
 
   async obtenerEstadisticas(options: {

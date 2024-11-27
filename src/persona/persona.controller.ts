@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Put, Query, Res } from '@nestjs/common';
+import { Body, Controller, Get, Injectable, Param, Post, Put, Query, Res } from '@nestjs/common';
 import { PersonaService } from './persona.service';
 import { CrearMiembroDto } from './dtos/crear-miembro.dto';
 import {
@@ -9,10 +9,11 @@ import {
   Ocupacion,
 } from './entities';
 import { Response } from 'express';
+import { OrganizacionService } from 'src/organizacion/organizacion.service';
 
 @Controller('persona')
 export class PersonaController {
-  constructor(private personaService: PersonaService) {}
+  constructor(private personaService: PersonaService, private organizacionService: OrganizacionService) {}
 
   @Get('discapacidades')
   obtenerDiscapacidades(): Promise<Discapacidad[]> {
@@ -65,6 +66,33 @@ export class PersonaController {
     },
   ): Promise<Miembro[]> {
     return this.personaService.obtenerMiembros(options);
+  }
+
+  @Get('miembros/reportes')
+  async obtenerInsights(
+    @Query()
+    options: {
+      zona?: number;
+      rol?: number;
+      requisito?: number;
+      competencia?: number;
+      results_since?: Date;
+      results_until?: Date;
+    },
+    @Res() res: Response,
+  ) {
+    let buffer = null;
+    
+    if(options.zona == 1000 || !options.zona) {
+      buffer = await this.personaService.obtenerReportesExcelTodas(options);
+    } else if(options.zona) {
+      buffer = await this.personaService.obtenerReportesExcelZona(options);
+    }
+
+    res.set('Content-Disposition', 'attachment; filename="reporte_consolidacion.xlsx"');
+    res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+    return res.send(buffer);
   }
 
   @Get('estadisticas')
