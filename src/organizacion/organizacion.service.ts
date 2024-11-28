@@ -66,11 +66,11 @@ export class OrganizacionService {
       zona: { id: data.zona_id },
     });
 
-    if(data.servicio_id === undefined) {
+    if(!data?.servicio_id) {
       historialMiembro.servicio = historialViejo.servicio;
     }
 
-    if(historialViejo.zona.id === historialMiembro.zona.id && historialViejo.servicio.id === historialMiembro.servicio.id) {
+    if(historialViejo?.zona?.id == historialMiembro?.zona?.id && historialViejo?.servicio?.id == historialMiembro.servicio.id) {
       return null;
     }
 
