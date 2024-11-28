@@ -158,4 +158,18 @@ export class FormacionService {
 
     return resultado;
   }
+
+  async eliminarResultado(id: string): Promise<Object> {
+    const parsedId: number = parseInt(id);
+
+    const resultado = await this.resultadoRepository.findOne({ where: { id: parsedId } });
+
+    if(!resultado) {
+      throw new HttpException('Resultado no encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    await this.resultadoRepository.remove(resultado);
+
+    return { mensaje: 'Resultado eliminado' };
+  }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
 import { FormacionService } from './formacion.service';
 import { crearEventoDto, crearResultadoDto } from './dtos';
 
@@ -27,6 +27,12 @@ export class FormacionController {
     dto: crearResultadoDto,
   ) {
     return this.formacionService.crearResultado(dto);
+  }
+
+  @Delete('resultados/:id')
+  eliminarResultado(@Param('id') id: string) {
+    return this.formacionService.eliminarResultado(id);
+
   }
 
   @Post('eventos')

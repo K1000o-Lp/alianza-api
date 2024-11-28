@@ -39,7 +39,7 @@ export class PersonaService {
   }
 
   async obtenerEducaciones(): Promise<Educacion[]> {
-    return await this.educacionRespository.find();
+    return await this.educacionRespository.find({order: { id: 'ASC' }});
   }
 
   async obtenerEducacion(term: number): Promise<Educacion> {
