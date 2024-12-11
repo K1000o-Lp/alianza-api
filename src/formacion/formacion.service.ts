@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import {
   Asistencia,
   Evento,
@@ -127,27 +127,31 @@ export class FormacionService {
     return asistencias;
   }
 
-  async crearResultado(dto: crearResultadoDto): Promise<Resultado | null> {
-    const requisito = await this.requisitoRepository.findOne({ where: { id: dto.requisito_id } });
+  async crearResultado(dto: crearResultadoDto): Promise<Resultado[] | null> {
+    const requisitos = await this.requisitoRepository.find({ where: { id: In(dto.requisito_ids) } });
 
-    if(!requisito) {
+    if(requisitos.length !== dto.requisito_ids.length) {
       throw new HttpException('Requisito no encontrado', HttpStatus.NOT_FOUND);
     }
 
-    const resultado = this.resultadoRepository.create(
-      {
-        miembro: { id: dto.miembro_id },
-        requisito,
-        creado_en: dto.fecha_consolidacion,
-      }
-    );
+    let resultados: Resultado[] = [];
+
+    requisitos.forEach(requisito => {
+      resultados.push(this.resultadoRepository.create({
+          miembro: { id: dto.miembro_id },
+          requisito,
+          creado_en: dto.fecha_consolidacion
+      }));
+    });
 
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
-      await queryRunner.manager.save(resultado);
+      resultados.forEach(async resultado => {
+        await queryRunner.manager.save(resultado);
+      });
       await queryRunner.commitTransaction();
     } catch (err) {
       await queryRunner.rollbackTransaction();
@@ -156,7 +160,7 @@ export class FormacionService {
       await queryRunner.release();
     }
 
-    return resultado;
+    return resultados;
   }
 
   async eliminarResultado(id: string): Promise<Object> {
