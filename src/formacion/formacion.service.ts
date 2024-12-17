@@ -36,6 +36,10 @@ export class FormacionService {
     return await this.formacionRepository.find();
   }
 
+  async obtenerRequisito(id: number): Promise<Requisito> {
+    return await this.requisitoRepository.findOne({ where: { id } });
+  }
+
   async obtenerRequisitos(options: {
     requisitos?: string;
   }): Promise<Requisito[]> {
