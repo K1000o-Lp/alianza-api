@@ -405,6 +405,237 @@ export class PersonaService {
     return await queryBuilder.getCount();
   }
 
+  async obtenerEstadisticasExcel(): Promise<any> {
+    const zonas = await this.organizacionService.obtenerZonas();
+    const requisitos = await this.formationService.obtenerRequisitos({});
+
+    const columns = [
+      { header: 'Zona', key: 'zona', width: 20 },
+      { header: 'Grupo de Conexion', key: 'grupo_conexion', width: 20 },
+      { header: 'Primeros Pasos', key: 'primeros_pasos', width: 20 },
+      { header: 'Bautismo', key: 'bautismo', width: 20 },
+      { header: 'Encuentro', key: 'encuentro', width: 20 },
+      { header: 'Pos Encuentro', key: 'pos_encuentro', width: 20 },
+      { header: 'Doctrinas 1', key: 'doctrinas_1', width: 20 },
+      { header: 'Doctrinas 2', key: 'doctrinas_2', width: 20 },
+      { header: 'Entt de Liderazgo', key: 'entt_liderazgo', width: 20 },
+      { header: 'Liderazgo', key: 'liderazgo', width: 15 },
+      { header: 'Encuentro de Oracion', key: 'encuentro_oracion', width: 20 },
+      { header: 'Lider', key: 'lider', width: 20 },
+    ];
+    const workbook = new Workbook();
+    const worksheet = workbook.addWorksheet('Resumen');
+    worksheet.columns = columns;
+
+    for(const zona of zonas) {
+      if(zona.id === Number(process.env.ZONA_0)) continue;
+
+      var row = {
+        zona: '',
+        grupo_conexion: 0,
+        primeros_pasos: 0,
+        bautismo: 0,
+        encuentro: 0,
+        pos_encuentro: 0,
+        doctrinas_1: 0,
+        doctrinas_2: 0,
+        entt_liderazgo: 0,
+        liderazgo: 0,
+        encuentro_oracion: 0,
+        lider: 0,
+      };
+
+      for(const requisito of requisitos) {
+        const cantidad = await this.obtenerEstadisticas({ zona: zona.id, requisito: requisito.id });
+
+        switch (requisito.id) {
+          case 1:
+            row.grupo_conexion = cantidad;
+            break;
+          case 2:
+            row.primeros_pasos = cantidad;
+            break;
+          case 3:
+            row.bautismo = cantidad;
+            break;
+          case 4:
+            row.encuentro = cantidad;
+            break;
+          case 5:
+            row.pos_encuentro = cantidad;
+            break;
+          case 6:
+            row.doctrinas_1 = cantidad;
+            break;
+          case 7:
+            row.doctrinas_2 = cantidad;
+            break;
+          case 8:
+            row.entt_liderazgo = cantidad;
+            break;
+          case 9:
+            row.liderazgo = cantidad;
+            break;
+          case 10:
+            row.encuentro_oracion = cantidad;
+            break;
+          case 11:
+            row.lider = cantidad;
+            break;
+        }
+      }
+
+      row.zona = zona.descripcion;
+      worksheet.addRow(row);
+    }
+
+    var finalRow = {
+      zona: 'Total',
+      grupo_conexion: 0,
+      primeros_pasos: 0,
+      bautismo: 0,
+      encuentro: 0,
+      pos_encuentro: 0,
+      doctrinas_1: 0,
+      doctrinas_2: 0,
+      entt_liderazgo: 0,
+      liderazgo: 0,
+      encuentro_oracion: 0,
+      lider: 0,
+    };
+
+    for(const requisito of requisitos) {
+
+      const cantidad = await this.obtenerEstadisticas({ requisito: requisito.id });
+
+      switch (requisito.id) {
+        case 1:
+          finalRow.grupo_conexion = cantidad;
+          break;
+        case 2:
+          finalRow.primeros_pasos = cantidad;
+          break;
+        case 3:
+          finalRow.bautismo = cantidad;
+          break;
+        case 4:
+          finalRow.encuentro = cantidad;
+          break;
+        case 5:
+          finalRow.pos_encuentro = cantidad;
+          break;
+        case 6:
+          finalRow.doctrinas_1 = cantidad;
+          break;
+        case 7:
+          row.doctrinas_2 = cantidad;
+          break;
+        case 8:
+          finalRow.entt_liderazgo = cantidad;
+          break;
+        case 9:
+          finalRow.liderazgo = cantidad;
+          break;
+        case 10:
+          finalRow.encuentro_oracion = cantidad;
+          break;
+        case 11:
+          finalRow.lider = cantidad;
+          break;
+      }
+
+    }
+    
+    worksheet.addRow(finalRow);
+
+    return await workbook.xlsx.writeBuffer();
+  }
+
+  async obtenerEstadisticasZonaExcel(options: {
+    zona: number;
+  }): Promise<any> {
+    const zona = await this.organizacionService.obtenerZona(options.zona);
+    const requisitos = await this.formationService.obtenerRequisitos({});
+
+    const columns = [
+      { header: 'Grupo de Conexion', key: 'grupo_conexion', width: 20 },
+      { header: 'Primeros Pasos', key: 'primeros_pasos', width: 20 },
+      { header: 'Bautismo', key: 'bautismo', width: 20 },
+      { header: 'Encuentro', key: 'encuentro', width: 20 },
+      { header: 'Pos Encuentro', key: 'pos_encuentro', width: 20 },
+      { header: 'Doctrinas 1', key: 'doctrinas_1', width: 20 },
+      { header: 'Doctrinas 2', key: 'doctrinas_2', width: 20 },
+      { header: 'Entt de Liderazgo', key: 'entt_liderazgo', width: 20 },
+      { header: 'Liderazgo', key: 'liderazgo', width: 15 },
+      { header: 'Encuentro de Oracion', key: 'encuentro_oracion', width: 20 },
+      { header: 'Lider', key: 'lider', width: 20 },
+    ];
+    const workbook = new Workbook();
+    const worksheet = workbook.addWorksheet('Resumen');
+    worksheet.columns = columns;
+
+    var row = {
+      zona: zona.descripcion,
+      grupo_conexion: 0,
+      primeros_pasos: 0,
+      bautismo: 0,
+      encuentro: 0,
+      pos_encuentro: 0,
+      doctrinas_1: 0,
+      doctrinas_2: 0,
+      entt_liderazgo: 0,
+      liderazgo: 0,
+      encuentro_oracion: 0,
+      lider: 0,
+    };
+
+    for(const requisito of requisitos) {
+      const cantidad = await this.obtenerEstadisticas({ zona: zona.id, requisito: requisito.id });
+
+      switch (requisito.id) {
+        case 1:
+          row.grupo_conexion = cantidad;
+          break;
+        case 2:
+          row.primeros_pasos = cantidad;
+          break;
+        case 3:
+          row.bautismo = cantidad;
+          break;
+        case 4:
+          row.encuentro = cantidad;
+          break;
+        case 5:
+          row.pos_encuentro = cantidad;
+          break;
+        case 6:
+          row.doctrinas_1 = cantidad;
+          break;
+        case 7:
+          row.doctrinas_2 = cantidad;
+          break;
+        case 8:
+          row.entt_liderazgo = cantidad;
+          break;
+        case 9:
+          row.liderazgo = cantidad;
+          break;
+        case 10:
+          row.encuentro_oracion = cantidad;
+          break;
+        case 11:
+          row.lider = cantidad;
+          break;
+      }
+    }
+
+    worksheet.addRow(row);
+
+    return await workbook.xlsx.writeBuffer();
+  }
+
+    
+
   async verificarSiMiembroExiste(options: {
     cedula: string;
     nombre_completo: string;

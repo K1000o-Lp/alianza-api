@@ -96,6 +96,27 @@ export class PersonaController {
     return res.send(buffer);
   }
 
+  @Get('estadisticas/reportes')
+  async obtenerEstadisticasExcel(
+    @Query() options: {
+      zona?: number;
+    },
+    @Res() res: Response
+  ) {
+    let buffer = null;
+
+    if(options.zona == 1000) {
+      buffer = await this.personaService.obtenerEstadisticasExcel();
+    } else {
+      buffer = await this.personaService.obtenerEstadisticasZonaExcel({ zona: options.zona });
+    }
+
+    res.set('Content-Disposition', 'attachment; filename="reporte_estadisticas.xlsx"');
+    res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+    return res.send(buffer);
+  }
+
   @Get('estadisticas')
   async obtenerConteo(
     @Query() options: { requisito?: number; competencia?: number; zona?: number; },
