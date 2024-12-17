@@ -11,6 +11,7 @@ import { Between, DataSource, In, Not, Repository } from 'typeorm';
 import { CrearMiembroDto } from './dtos/crear-miembro.dto';
 import { OrganizacionService } from 'src/organizacion/organizacion.service';
 import { Workbook } from 'exceljs';
+import { FormacionService } from 'src/formacion/formacion.service';
 
 @Injectable()
 export class PersonaService {
@@ -25,6 +26,7 @@ export class PersonaService {
     private ocupacionRepository: Repository<Ocupacion>,
     @InjectRepository(Miembro) private miembroRepository: Repository<Miembro>,
     private organizacionService: OrganizacionService,
+    private formationService: FormacionService,
     private dataSource: DataSource
   ) {}
 
@@ -69,7 +71,7 @@ export class PersonaService {
   }
 
   async crearMiembro(dto: CrearMiembroDto): Promise<Miembro> {
-    const { historial, ...data } = dto;
+    const { historial, requisito, ...data } = dto;
 
     const miembroExiste = await this.verificarSiMiembroExiste({ cedula: data.cedula, nombre_completo: data.nombre_completo });
 
@@ -100,7 +102,7 @@ export class PersonaService {
       },
       historiales:  [ historialMiembro ],
     });
-
+  
     const queryRunner = this.dataSource.createQueryRunner();
 
     await queryRunner.connect();
@@ -114,6 +116,16 @@ export class PersonaService {
       throw new HttpException('Error al crear miembro. Por favor, intente mas tarde', HttpStatus.INTERNAL_SERVER_ERROR);
     } finally {
       await queryRunner.release();
+    }
+
+    if(requisito.requisito_ids && requisito.requisito_ids?.length > 0) {
+      const resultados = await this.formationService.crearResultado({
+        miembro_id: miembro.id,
+        requisito_ids: requisito.requisito_ids,
+        fecha_consolidacion: new Date(),
+      });
+
+      miembro.resultados = resultados;
     }
 
     return miembro;
