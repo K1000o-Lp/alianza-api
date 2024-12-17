@@ -411,6 +411,7 @@ export class PersonaService {
 
     const columns = [
       { header: 'Zona', key: 'zona', width: 20 },
+      { header: 'Membresia', key: 'membresia', width: 20 },
       { header: 'Grupo de Conexion', key: 'grupo_conexion', width: 20 },
       { header: 'Primeros Pasos', key: 'primeros_pasos', width: 20 },
       { header: 'Bautismo', key: 'bautismo', width: 20 },
@@ -432,6 +433,7 @@ export class PersonaService {
 
       var row = {
         zona: '',
+        membresia: 0,
         grupo_conexion: 0,
         primeros_pasos: 0,
         bautismo: 0,
@@ -485,12 +487,14 @@ export class PersonaService {
         }
       }
 
+      row.membresia = await this.obtenerEstadisticas({ zona: zona.id });
       row.zona = zona.descripcion;
       worksheet.addRow(row);
     }
 
     var finalRow = {
       zona: 'Total',
+      membresia: 0,
       grupo_conexion: 0,
       primeros_pasos: 0,
       bautismo: 0,
@@ -545,6 +549,8 @@ export class PersonaService {
       }
 
     }
+
+    finalRow.membresia = await this.obtenerEstadisticas({});
     
     worksheet.addRow(finalRow);
 
@@ -559,6 +565,7 @@ export class PersonaService {
 
     const columns = [
       { header: 'Grupo de Conexion', key: 'grupo_conexion', width: 20 },
+      { header: 'Membresia', key: 'membresia', width: 20 },
       { header: 'Primeros Pasos', key: 'primeros_pasos', width: 20 },
       { header: 'Bautismo', key: 'bautismo', width: 20 },
       { header: 'Encuentro', key: 'encuentro', width: 20 },
@@ -587,6 +594,7 @@ export class PersonaService {
       liderazgo: 0,
       encuentro_oracion: 0,
       lider: 0,
+      membresia: 0,
     };
 
     for(const requisito of requisitos) {
@@ -628,6 +636,8 @@ export class PersonaService {
           break;
       }
     }
+
+    row.membresia = await this.obtenerEstadisticas({ zona: zona.id });
 
     worksheet.addRow(row);
 
