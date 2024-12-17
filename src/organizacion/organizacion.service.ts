@@ -19,6 +19,10 @@ export class OrganizacionService {
     return await this.zonaRepository.find();
   }
 
+  async obtenerZona(id: number): Promise<Zona> {
+    return await this.zonaRepository.findOne({where: { id: id } });
+  }
+
   async obtenerServicios(): Promise<Servicio[]> {
     return await this.servicioRepository.find();
   }
