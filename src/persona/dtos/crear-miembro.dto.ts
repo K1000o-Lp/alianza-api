@@ -20,4 +20,8 @@ export interface CrearMiembroDto {
   discapacidad_id: number;
 
   historial: crearHistorialMiembroDto;
+
+  requisito: {
+    requisito_ids: number[];
+  }
 }
