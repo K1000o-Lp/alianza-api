@@ -28,6 +28,10 @@ export class HistorialMiembro {
   @JoinColumn({ name: 'zona_id' })
   zona: Zona;
 
+  @ManyToOne(() => Miembro, (miembro) => miembro.historiales_supervisados)
+  @JoinColumn({ name: 'supervisor_id' })
+  supervisor: Miembro;
+
   @CreateDateColumn()
   fecha_inicio: Timestamp;
 
