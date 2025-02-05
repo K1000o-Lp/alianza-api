@@ -57,6 +57,7 @@ export class PersonaController {
       id?: number;  
       cedula?: string;
       zona?: number;
+      supervisor?: number;
       rol?: number;
       no_completado?: string;
       requisito?: number;
