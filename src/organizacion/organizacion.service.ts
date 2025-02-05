@@ -1,8 +1,9 @@
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { HistorialMiembro, Servicio, Zona } from './entities';
+import { HistorialMiembro, Servicio, Zona, ZonaSupervisor } from './entities';
 import { crearHistorialMiembroDto } from './dtos/crear-historial-miembro.dto';
+import { crearZonaSupervisorDto } from './dtos/crear-zona-supervisor.dto';
 
 @Injectable()
 export class OrganizacionService {
@@ -12,6 +13,8 @@ export class OrganizacionService {
     private servicioRepository: Repository<Servicio>,
     @InjectRepository(HistorialMiembro)
     private historialMiembroRepository: Repository<HistorialMiembro>,
+    @InjectRepository(ZonaSupervisor)
+    private zonaSupervisorRepository: Repository<ZonaSupervisor>,
     private dataSource: DataSource
   ) {}
 
@@ -35,6 +38,7 @@ export class OrganizacionService {
     const historialMiembro = this.historialMiembroRepository.create({
       servicio: { id: data.servicio_id },
       zona: { id: data.zona_id },
+      supervisor: { id: data.supervisor_id },
     });
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -62,19 +66,21 @@ export class OrganizacionService {
         miembro: true,
         zona: true,
         servicio: true,
+        supervisor: true,
       }, 
       where: { miembro: { id: miembroId }, fecha_finalizacion: null } });
 
     const historialMiembro = this.historialMiembroRepository.create({
       servicio: { id: data.servicio_id },
       zona: { id: data.zona_id },
+      supervisor: { id: data.supervisor_id },
     });
 
     if(!data?.servicio_id) {
       historialMiembro.servicio = historialViejo.servicio;
     }
 
-    if(historialViejo?.zona?.id == historialMiembro?.zona?.id && historialViejo?.servicio?.id == historialMiembro.servicio.id) {
+    if(historialViejo?.zona?.id == historialMiembro?.zona?.id && historialViejo?.servicio?.id == historialMiembro.servicio.id && historialViejo?.supervisor?.id == historialMiembro.supervisor.id) {
       return null;
     }
 
@@ -94,5 +100,62 @@ export class OrganizacionService {
     }
 
     return historialMiembro;
+  }
+
+  async obtenerSupervisores(options: { zona_id?: number }): Promise<ZonaSupervisor[]> {
+    if(options?.zona_id == 0) {
+      return await this.zonaSupervisorRepository.find({ relations: { miembro: true } });
+    }
+
+    return await this.zonaSupervisorRepository.find({ where: { zona: { id: options?.zona_id } }, relations: { miembro: true }});
+  }
+
+  async obtenerSupervisor(id: number): Promise<ZonaSupervisor> {
+    return await this.zonaSupervisorRepository.findOne({ where: { id: id }, relations: { miembro: true } });
+  }
+
+  async crearSupervisor(dto: crearZonaSupervisorDto): Promise<ZonaSupervisor[]> {
+    const { miembro_ids, zona_id } = dto;
+
+    if(zona_id == 1000) {
+      throw new HttpException('No se puede asignar supervisor a todas las zonas', HttpStatus.BAD_REQUEST);
+    }
+
+    let supervisors: ZonaSupervisor[] = [];
+
+    miembro_ids.forEach((miembro_id) => {
+      supervisors.push(this.zonaSupervisorRepository.create({
+        zona: { id: zona_id },
+        miembro: { id: miembro_id },
+      }));
+    });
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      supervisors.forEach(async supervisor => {
+        await queryRunner.manager.save(supervisor);
+      });
+      await queryRunner.commitTransaction();
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw new HttpException('Error al crear supervisor. Por favor, intente mas tarde', HttpStatus.INTERNAL_SERVER_ERROR);
+    } finally {
+      await queryRunner.release();
+    }
+
+    return supervisors;
+  }
+
+  async eliminarSupervisor(id: number): Promise<void>{
+    const supervisor = await this.zonaSupervisorRepository.findOne({ where: { id: id } });
+
+    if(!supervisor) {
+      throw new HttpException('Supervisor no encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    await this.zonaSupervisorRepository.softDelete({ id: id });
   }
 }

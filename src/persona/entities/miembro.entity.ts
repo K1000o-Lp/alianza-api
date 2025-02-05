@@ -62,6 +62,12 @@ export class Miembro {
   )
   historiales: HistorialMiembro[];
 
+  @OneToMany(
+    () => HistorialMiembro,
+    (historial_miembro) => historial_miembro.supervisor,
+  )
+  historiales_supervisados: HistorialMiembro[];
+
   @OneToMany(() => Asistencia, (asistencia) => asistencia.miembro)
   asistencias: Asistencia[];
 
