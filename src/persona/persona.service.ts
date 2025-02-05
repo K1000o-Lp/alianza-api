@@ -184,6 +184,7 @@ export class PersonaService {
     id?: number;
     cedula?: string;
     zona?: number;
+    supervisor?: number;
     rol?: number;
     no_completado?: string;
     requisito?: number;
@@ -208,7 +209,10 @@ export class PersonaService {
           id: options?.rol,
         },
         zona:{
-          id: options?.zona == 1000 ? undefined : options?.zona
+          id: options?.zona == 0 ? undefined : options?.zona
+        },
+        supervisor: {
+          id: options?.supervisor == 0 ? undefined : options.supervisor,
         }
       },
     };
@@ -217,7 +221,7 @@ export class PersonaService {
       whereClause.historiales.zona.id = options?.zona;
     }
 
-    if (options?.zona == 1000) {
+    if (options?.zona == 0) {
       whereClause.historiales.zona.id = Not(zona0);
     } 
 
@@ -291,6 +295,7 @@ export class PersonaService {
         historiales: {
           servicio: true,
           zona: true, 
+          supervisor: true,
         },
         resultados: {
           requisito: true,
@@ -643,8 +648,6 @@ export class PersonaService {
 
     return await workbook.xlsx.writeBuffer();
   }
-
-    
 
   async verificarSiMiembroExiste(options: {
     cedula: string;
