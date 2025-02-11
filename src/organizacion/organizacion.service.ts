@@ -117,7 +117,7 @@ export class OrganizacionService {
   async crearSupervisor(dto: crearZonaSupervisorDto): Promise<ZonaSupervisor[]> {
     const { miembro_ids, zona_id } = dto;
 
-    if(zona_id == 1000) {
+    if(zona_id == 0) {
       throw new HttpException('No se puede asignar supervisor a todas las zonas', HttpStatus.BAD_REQUEST);
     }
 
