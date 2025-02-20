@@ -331,6 +331,9 @@ export class PersonaService {
       { header: 'ID', key: 'id', width: 10 },
       { header: 'Cédula', key: 'cedula', width: 15 },
       { header: 'Nombre Completo', key: 'nombre_completo', width: 50 },
+      { header: 'Teléfono', key: 'telefono', width: 20 },
+      { header: 'Proceso actual', key: 'proceso_actual', width: 50 },
+      { header: 'Supervisor', key: 'supervisor', width: 50 },
     ];
     
     zonas.forEach((zona) => {
@@ -342,9 +345,12 @@ export class PersonaService {
 
         worksheet.addRow({
           id: member.id,
-          cedula: member.cedula,
+          cedula: member.cedula ?? 'NINGUNA',
           nombre_completo: member.nombre_completo,
           zona: member.historiales[0].zona.descripcion,
+          telefono: member.telefono ?? 'NINGUNO',
+          proceso_actual: member.resultados[0].requisito?.nombre ?? 'SIN PROCESO',
+          supervisor: member.historiales[0].supervisor?.nombre_completo ?? 'N/A',
         });
       });
     });
@@ -369,6 +375,9 @@ export class PersonaService {
       { header: 'ID', key: 'id', width: 10 },
       { header: 'Cédula', key: 'cedula', width: 15 },
       { header: 'Nombre Completo', key: 'nombre_completo', width: 50 },
+      { header: 'Teléfono', key: 'telefono', width: 20 },
+      { header: 'Proceso actual', key: 'proceso_actual', width: 50 },
+      { header: 'Supervisor', key: 'supervisor', width: 50 },
     ];
     const worksheet = workbook.addWorksheet(members[0].historiales[0].zona.descripcion);
     worksheet.columns = columns;
@@ -376,8 +385,11 @@ export class PersonaService {
     members.forEach((member) => {
       worksheet.addRow({
         id: member.id,
-        cedula: member.cedula,
+        cedula: member.cedula ?? 'NINGUNA',
         nombre_completo: member.nombre_completo,
+        telefono: member.telefono ?? 'NINGUNO',
+        proceso_actual: member.resultados[0].requisito?.nombre ?? 'SIN PROCESO',
+        supervisor: member.historiales[0].supervisor?.nombre_completo ?? 'N/A',
       });
     });
 
