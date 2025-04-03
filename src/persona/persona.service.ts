@@ -172,6 +172,7 @@ export class PersonaService {
       await queryRunner.commitTransaction();
     } catch(err) {
       await queryRunner.rollbackTransaction();
+      console.log(err);
       throw new HttpException('Error al actualizar miembro. Por favor, intente mas tarde', HttpStatus.INTERNAL_SERVER_ERROR);
     }  finally {
       await queryRunner.release();

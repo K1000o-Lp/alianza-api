@@ -38,7 +38,7 @@ export class OrganizacionService {
     const historialMiembro = this.historialMiembroRepository.create({
       servicio: { id: data.servicio_id },
       zona: { id: data.zona_id },
-      supervisor: { id: data.supervisor_id },
+      ...(data.supervisor_id ? { supervisor: { id: data.supervisor_id } } : {}),
     });
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -49,6 +49,7 @@ export class OrganizacionService {
       await queryRunner.manager.save(historialMiembro);
       await queryRunner.commitTransaction();
     } catch (err) {
+      console.log(err);
       await queryRunner.rollbackTransaction();
       throw new HttpException('Error al crear miembro. Por favor, intente mas tarde', HttpStatus.INTERNAL_SERVER_ERROR);
     } finally {
