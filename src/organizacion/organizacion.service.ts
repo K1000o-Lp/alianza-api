@@ -74,15 +74,15 @@ export class OrganizacionService {
     const historialMiembro = this.historialMiembroRepository.create({
       servicio: { id: data.servicio_id },
       zona: { id: data.zona_id },
-      supervisor: { id: data.supervisor_id },
+      ...(data.supervisor_id ? { supervisor: { id: data.supervisor_id } } : {}),
     });
 
     if(!data?.servicio_id) {
       historialMiembro.servicio = historialViejo.servicio;
     }
 
-    if(historialViejo?.zona?.id == historialMiembro?.zona?.id && historialViejo?.servicio?.id == historialMiembro.servicio.id && historialViejo?.supervisor?.id == historialMiembro.supervisor.id) {
-      return null;
+    if(historialViejo?.zona?.id == historialMiembro?.zona?.id && historialViejo?.servicio?.id == historialMiembro.servicio.id && historialViejo?.supervisor?.id == historialMiembro?.supervisor?.id) {
+      throw new HttpException('No se han realizado cambios en el historial', HttpStatus.BAD_REQUEST); 
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -94,6 +94,7 @@ export class OrganizacionService {
       await queryRunner.manager.save(historialMiembro);
       await queryRunner.commitTransaction();
     } catch (err) {
+      console.log(err);
       await queryRunner.rollbackTransaction();
       throw new HttpException('Error al actualizar historial. Por favor, intente mas tarde', HttpStatus.INTERNAL_SERVER_ERROR);
     } finally {
