@@ -191,8 +191,9 @@ export class PersonaService {
     requisito?: number;
     results_since?: Date;
     results_until?: Date;
+    limite?: number;
+    desplazamiento?: number;
   }): Promise<Miembro[]> {
-    const requisitoOrder = options?.id ? 'ASC' : 'DESC';
     const noCompletado = options?.no_completado === 'true' ? true : false;
     const zona0 = Number(process.env.ZONA_0);
 
@@ -286,32 +287,32 @@ export class PersonaService {
     if(options?.requisito == 11 && noCompletado) {
       whereClause.resultados.requisito.id = 10;
     }
-
-    const miembros = await this.miembroRepository.find({
-      relations: {
-        estado_civil: true,
-        ocupacion: true,
-        educacion: true,
-        discapacidad: true,
-        historiales: {
-          servicio: true,
-          zona: true, 
-          supervisor: true,
-        },
-        resultados: {
-          requisito: true,
-        }
-      },
-      where: whereClause,
-      order: {
-        id: 'ASC',
-        resultados: {
-          requisito: {
-            id: requisitoOrder,
-          },
-        },
-      }
-    });
+    
+    const queryBuilder = this.miembroRepository
+      .createQueryBuilder('miembro')
+      .leftJoinAndSelect('miembro.estado_civil', 'estado_civil')
+      .leftJoinAndSelect('miembro.ocupacion', 'ocupacion')
+      .leftJoinAndSelect('miembro.educacion', 'educacion')
+      .leftJoinAndSelect('miembro.discapacidad', 'discapacidad')
+      .leftJoinAndSelect('miembro.historiales', 'historiales')
+      .leftJoinAndSelect('historiales.servicio', 'servicio')
+      .leftJoinAndSelect('historiales.zona', 'zona')
+      .leftJoinAndSelect('historiales.supervisor', 'supervisor')
+      .leftJoinAndSelect('miembro.resultados', 'resultados')
+      .leftJoinAndSelect('resultados.requisito', 'requisito');
+      
+    // Apply the same where conditions
+    if (whereClause.id) queryBuilder.andWhere('miembro.id = :id', { id: whereClause.id });
+    if (whereClause.cedula) queryBuilder.andWhere('miembro.cedula = :cedula', { cedula: whereClause.cedula });
+    
+    // Order by miembro.id first
+    queryBuilder.orderBy('miembro.id', 'ASC');
+    
+    // Apply pagination
+    if (options.desplazamiento) queryBuilder.skip(Number(options.desplazamiento));
+    if (options.limite) queryBuilder.take(Number(options.limite));
+    
+    const miembros = await queryBuilder.getMany();
 
     return miembros;
   }
