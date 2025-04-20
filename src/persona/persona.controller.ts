@@ -64,6 +64,8 @@ export class PersonaController {
       competencia?: number;
       results_since?: Date;
       results_until?: Date;
+      limite?: number;
+      desplazamiento?: number;
     },
   ): Promise<Miembro[]> {
     return this.personaService.obtenerMiembros(options);
