@@ -82,7 +82,7 @@ export class OrganizacionService {
     }
 
     if(historialViejo?.zona?.id == historialMiembro?.zona?.id && historialViejo?.servicio?.id == historialMiembro?.servicio?.id && historialViejo?.supervisor?.id == historialMiembro?.supervisor?.id) {
-      throw new HttpException('No se han realizado cambios en el historial', HttpStatus.BAD_REQUEST); 
+      return null; 
     }
 
     const queryRunner = this.dataSource.createQueryRunner();
