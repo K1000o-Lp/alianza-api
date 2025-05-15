@@ -7,7 +7,7 @@ import {
   Miembro,
   Ocupacion,
 } from './entities';
-import { Between, DataSource, In, Not, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { CrearMiembroDto } from './dtos/crear-miembro.dto';
 import { OrganizacionService } from 'src/organizacion/organizacion.service';
 import { Workbook } from 'exceljs';
@@ -191,127 +191,92 @@ export class PersonaService {
     requisito?: number;
     results_since?: Date;
     results_until?: Date;
+    limite?: number;
+    desplazamiento?: number;
   }): Promise<Miembro[]> {
-    const requisitoOrder = options?.id ? 'ASC' : 'DESC';
     const noCompletado = options?.no_completado === 'true' ? true : false;
     const zona0 = Number(process.env.ZONA_0);
 
-    const whereClause: any = {
-      id: options?.id,
-      cedula: options?.cedula,
-      resultados: {
-        requisito: {
-          id: options?.requisito,
-        },
-      },
-      historiales: {
-        fecha_finalizacion: null,
-        servicio: {
-          id: options?.rol,
-        },
-        zona:{
-          id: options?.zona == 0 ? undefined : options?.zona
-        },
-        supervisor: {
-          id: options?.supervisor == 0 ? undefined : options.supervisor,
-        }
-      },
-    };
-    
-    if (options?.zona != zona0) {
-      whereClause.historiales.zona.id = options?.zona;
-    }
-
-    if (options?.zona == 0) {
-      whereClause.historiales.zona.id = Not(zona0);
-    } 
-
-    if(options?.results_since && options?.results_until) {
-      whereClause.resultados.creado_en = Between(options?.results_since, options?.results_until);
-    }
-
-    if (options?.requisito && noCompletado) {
-      delete whereClause.resultados.requisito.id;
-      delete whereClause.resultados.creado_en;
-
-      const membersWithRequirement = await this.miembroRepository
+    const queryBuilder = this.miembroRepository
       .createQueryBuilder('miembro')
-      .innerJoin('miembro.resultados', 'resultado')
-      .innerJoin('resultado.requisito', 'requisito')
-      .where('requisito.id = :requisitoId', { requisitoId: options?.requisito })
-      .select('miembro.id')
-      .getRawMany();
+      .leftJoinAndSelect('miembro.estado_civil', 'estado_civil')
+      .leftJoinAndSelect('miembro.ocupacion', 'ocupacion')
+      .leftJoinAndSelect('miembro.educacion', 'educacion')
+      .leftJoinAndSelect('miembro.discapacidad', 'discapacidad')
+      .leftJoinAndSelect('miembro.historiales', 'historiales')
+      .leftJoinAndSelect('historiales.servicio', 'servicio')
+      .leftJoinAndSelect('historiales.zona', 'zona')
+      .leftJoinAndSelect('historiales.supervisor', 'supervisor')
+      .leftJoinAndSelect('miembro.resultados', 'resultados')
+      .leftJoinAndSelect('resultados.requisito', 'requisito');
 
-      whereClause.id = Not(In(
-        membersWithRequirement.map(({ miembro_id }) => miembro_id)
-      ));
+    if (options?.id) queryBuilder.andWhere('miembro.id = :id', { id: options.id });
+
+    if (options?.cedula) queryBuilder.andWhere('miembro.cedula = :cedula', { cedula: options.cedula });
+    
+    if (options?.zona) {
+      if (options?.zona == 0) queryBuilder.andWhere('zona.id != :zona0', { zona0 });
+      else queryBuilder.andWhere('zona.id = :zona', { zona: options.zona });
+    } 
+    
+    if (options?.rol) queryBuilder.andWhere('servicio.id = :rol', { rol: options.rol });
+    
+    if (Number(options?.supervisor)) queryBuilder.andWhere('supervisor.id = :supervisor', { supervisor: options.supervisor });
+    
+    if (options?.results_since && options?.results_until) {
+      // Convert to Date objects if they're strings
+      const since = options.results_since instanceof Date ? 
+      options.results_since : 
+      new Date(options.results_since);
+      
+      const until = options.results_until instanceof Date ? 
+      options.results_until : 
+      new Date(options.results_until);
+      
+      // Set time to start of day for since and end of day for until
+      since.setHours(0, 0, 0, 0);
+      until.setHours(23, 59, 59, 999);
+      
+      queryBuilder.andWhere('resultados.creado_en BETWEEN :since AND :until', {
+      since,
+      until,
+      });
     }
+    
+    if (options?.requisito) {
+      if (noCompletado) {
+        const membersWithRequirement = await this.miembroRepository
+          .createQueryBuilder('miembro')
+          .innerJoin('miembro.resultados', 'resultados')
+          .innerJoin('resultados.requisito', 'requisito')
+          .where('requisito.id = :requisitoId', { requisitoId: options.requisito })
+          .select('miembro.id')
+          .getRawMany();
 
-    // Para hacer bautismo (requisito 3) o encuentro (requisito 4) deben haber completado primeros pasos (requisito 2)
-    // if((options?.requisito == 3 || options.requisito == 4) && noCompletado) {
-    //   whereClause.resultados.requisito.id = 2;
-    // }
+        queryBuilder.andWhere('miembro.id NOT IN (:...ids)', {
+          ids: membersWithRequirement.map(({ miembro_id }) => miembro_id),
+        });
 
-    // Para hacer pos encuentro (requisito 5) deben haber hecho encuentro (requisito 4)
-    if(options?.requisito == 5 && noCompletado) {
-      whereClause.resultados.requisito.id = 4;
-    }
-
-    // Para hacer doctrinas 1 (requisito 6) deben haber hecho pos encuentro (requisito 5)
-    if(options?.requisito == 6 && noCompletado) {
-      whereClause.resultados.requisito.id = 5;
-    }
-
-    // Para hacer doctrinas 2 (requisito 7) deben haber hecho doctrinas 1 (requisito 6)
-    if(options?.requisito == 7 && noCompletado) {
-      whereClause.resultados.requisito.id = 6;
-    }
-
-    // Para hacer entt de liderazgo (requisito 8) deben haber hecho doctrinas 2 (requisito 7)
-    if(options?.requisito == 8 && noCompletado) {
-      whereClause.resultados.requisito.id = 7;
-    }
-
-    // Para hacer liderazgo (requisito 9) deben haber hecho doctrinas 2 (requisito 7)
-    if(options?.requisito == 9 && noCompletado) {
-      whereClause.resultados.requisito.id = 7;
-    }
-
-    // Para hacer encuentro de oracion (requisito 10) deben haber hecho liderazgo (requisito 9)
-    if(options?.requisito == 10 && noCompletado) {
-      whereClause.resultados.requisito.id = 9;
-    }
-
-    // Para hacer lider (requisito 11) deben haber hecho encuentro de oracion (requisito 10)
-    if(options?.requisito == 11 && noCompletado) {
-      whereClause.resultados.requisito.id = 10;
-    }
-
-    const miembros = await this.miembroRepository.find({
-      relations: {
-        estado_civil: true,
-        ocupacion: true,
-        educacion: true,
-        discapacidad: true,
-        historiales: {
-          servicio: true,
-          zona: true, 
-          supervisor: true,
-        },
-        resultados: {
-          requisito: true,
-        }
-      },
-      where: whereClause,
-      order: {
-        id: 'ASC',
-        resultados: {
-          requisito: {
-            id: requisitoOrder,
-          },
-        },
+        // Additional conditions for specific requisitos
+        if (options.requisito == 5) queryBuilder.andWhere('requisito.id = 4');
+        if (options.requisito == 6) queryBuilder.andWhere('requisito.id = 5');
+        if (options.requisito == 7) queryBuilder.andWhere('requisito.id = 6');
+        if (options.requisito == 8) queryBuilder.andWhere('requisito.id = 7');
+        if (options.requisito == 9) queryBuilder.andWhere('requisito.id = 7');
+        if (options.requisito == 11) queryBuilder.andWhere('requisito.id = 10');
+      } else {
+        queryBuilder.andWhere('requisito.id = :requisito', { requisito: options.requisito });
       }
-    });
+    }
+
+    // Order by miembro.id first
+    queryBuilder.orderBy('miembro.nombre_completo', 'ASC');
+    
+    // Apply pagination
+    if (options.desplazamiento) queryBuilder.skip(Number(options.desplazamiento));
+    if (options.limite) queryBuilder.take(Number(options.limite));
+    
+    const miembros = await queryBuilder.getMany();
 
     return miembros;
   }
@@ -322,11 +287,12 @@ export class PersonaService {
     rol?: number;
     no_completado?: string;
     requisito?: number;
+    zona?: number;
     results_since?: Date;
     results_until?: Date;
   }): Promise<any> {
     const zonas = await this.organizacionService.obtenerZonas();
-    const members = await this.obtenerMiembros(options);
+    const members = await this.obtenerMiembros({});
     const workbook = new Workbook();
     const columns = [
       { header: 'ID', key: 'id', width: 10 },
@@ -342,16 +308,16 @@ export class PersonaService {
       worksheet.columns = columns;
 
       members.forEach((member) => {
-        if (member.historiales[0].zona.id !== zona.id) return;
+        if (member?.historiales[0]?.zona?.id !== zona?.id) return;
 
         worksheet.addRow({
-          id: member.id,
-          cedula: member.cedula ?? 'NINGUNA',
-          nombre_completo: member.nombre_completo,
-          zona: member.historiales[0].zona.descripcion,
-          telefono: member.telefono ?? 'NINGUNO',
-          proceso_actual: member.resultados[0].requisito?.nombre ?? 'SIN PROCESO',
-          supervisor: member.historiales[0].supervisor?.nombre_completo ?? 'N/A',
+          id: member?.id,
+          cedula: member?.cedula ?? 'NINGUNA',
+          nombre_completo: member?.nombre_completo,
+          zona: member?.historiales[0]?.zona?.descripcion,
+          telefono: member?.telefono ?? 'NINGUNO',
+          proceso_actual: member?.resultados[0]?.requisito?.nombre ?? 'SIN PROCESO',
+          supervisor: member?.historiales[0]?.supervisor?.nombre_completo ?? 'N/A',
         });
       });
     });

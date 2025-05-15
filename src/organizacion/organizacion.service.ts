@@ -1,4 +1,4 @@
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { HistorialMiembro, Servicio, Zona, ZonaSupervisor } from './entities';
@@ -81,8 +81,8 @@ export class OrganizacionService {
       historialMiembro.servicio = historialViejo.servicio;
     }
 
-    if(historialViejo?.zona?.id == historialMiembro?.zona?.id && historialViejo?.servicio?.id == historialMiembro.servicio.id && historialViejo?.supervisor?.id == historialMiembro?.supervisor?.id) {
-      throw new HttpException('No se han realizado cambios en el historial', HttpStatus.BAD_REQUEST); 
+    if(historialViejo?.zona?.id == historialMiembro?.zona?.id && historialViejo?.servicio?.id == historialMiembro?.servicio?.id && historialViejo?.supervisor?.id == historialMiembro?.supervisor?.id) {
+      return null; 
     }
 
     const queryRunner = this.dataSource.createQueryRunner();

@@ -64,6 +64,8 @@ export class PersonaController {
       competencia?: number;
       results_since?: Date;
       results_until?: Date;
+      limite?: number;
+      desplazamiento?: number;
     },
   ): Promise<Miembro[]> {
     return this.personaService.obtenerMiembros(options);
@@ -85,7 +87,7 @@ export class PersonaController {
   ) {
     let buffer = null;
     
-    if(options.zona == 1000 || !options.zona) {
+    if(options.zona == 0 || !options.zona) {
       buffer = await this.personaService.obtenerReportesExcelTodas(options);
     } else if(options.zona) {
       buffer = await this.personaService.obtenerReportesExcelZona(options);
@@ -106,7 +108,7 @@ export class PersonaController {
   ) {
     let buffer = null;
 
-    if(options.zona == 1000) {
+    if(options.zona == 0) {
       buffer = await this.personaService.obtenerEstadisticasExcel();
     } else {
       buffer = await this.personaService.obtenerEstadisticasZonaExcel({ zona: options.zona });
