@@ -193,6 +193,7 @@ export class PersonaService {
     results_until?: Date;
     limite?: number;
     desplazamiento?: number;
+    q?: string;
   }): Promise<Miembro[]> {
     const noCompletado = options?.no_completado === 'true' ? true : false;
     const zona0 = Number(process.env.ZONA_0);
@@ -267,6 +268,10 @@ export class PersonaService {
       } else {
         queryBuilder.andWhere('requisito.id = :requisito', { requisito: options.requisito });
       }
+    }
+
+    if(options.q) {
+      queryBuilder.andWhere('(miembro.nombre_completo ILIKE :q OR miembro.cedula ILIKE :q)', { q: `%${options.q}%` });
     }
 
     // Order by miembro.id first
