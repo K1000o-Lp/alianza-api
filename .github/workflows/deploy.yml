@@ -9,8 +9,9 @@ on:
 env:
   NODE_ENV: production
   PORT: 3000
-  # Agrega aquí las variables que no sean secretos
-  # EXAMPLE_VAR: value
+  DB_SYNC: true
+  DB_AUTO_LOAD_ENTITIES: true
+  ZONA_0: 12
 
 jobs:
   build-and-deploy:
