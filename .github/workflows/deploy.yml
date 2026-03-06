@@ -44,12 +44,12 @@ jobs:
       - name: Copy build via SCP
         run: |
           scp -r dist package.json package-lock.json \
-            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.BACKEND_DEPLOY_PATH }}
+            ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.SERVER_DEPLOY_PATH }}
 
       - name: Install production dependencies on server
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "cd ${{ secrets.BACKEND_DEPLOY_PATH }} && npm ci --omit=dev"
+            "cd ${{ secrets.SERVER_DEPLOY_PATH }} && npm ci --omit=dev"
 
       # Descomenta el paso que aplique para reiniciar el servicio:
 
