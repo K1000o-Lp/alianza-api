@@ -43,6 +43,11 @@ jobs:
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
             "source ~/.nvm/nvm.sh && cd ${{ secrets.SERVER_DEPLOY_PATH }} && npm ci --omit=dev"
 
+      - name: Pull latest code on server
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "cd ${{ secrets.SERVER_DEPLOY_PATH }} && git pull origin main"
+
       # Descomenta el paso que aplique para reiniciar el servicio:
 
       # Opción A - PM2
