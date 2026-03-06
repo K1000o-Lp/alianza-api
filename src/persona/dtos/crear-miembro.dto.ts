@@ -9,9 +9,9 @@ export interface CrearMiembroDto {
 
   fecha_nacimiento: Date;
 
-  hijos: number;
+  hijos?: number;
 
-  educacion_id: number;
+  educacion_id?: number;
 
   estado_civil_id: number;
 

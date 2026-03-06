@@ -38,7 +38,7 @@ export class Miembro {
   @JoinColumn({ name: 'estado_civil_id' })
   estado_civil: EstadoCivil;
 
-  @Column()
+  @Column({ nullable: true })
   hijos: number;
 
   @ManyToOne(() => Educacion, (educacion) => educacion.miembros)

@@ -87,12 +87,12 @@ export class PersonaService {
       nombre_completo: data.nombre_completo,
       fecha_nacimiento: data.fecha_nacimiento? data.fecha_nacimiento : null,
       telefono: data.telefono ? data.telefono : null,
-      hijos: data.hijos,
+      hijos: data.hijos ?? null,
       estado_civil: {
         id: data.estado_civil_id ? data.estado_civil_id : null,
       },
       educacion: {
-        id: data.educacion_id,
+        id: data.educacion_id ? data.educacion_id : null,
       },
       ocupacion: {
         id: data.ocupacion_id,
