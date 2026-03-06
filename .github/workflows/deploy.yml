@@ -31,7 +31,7 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run build
+        run: ./node_modules/.bin/nest build
 
       - name: Set up SSH key
         run: |
