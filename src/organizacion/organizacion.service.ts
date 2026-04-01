@@ -32,6 +32,7 @@ export class OrganizacionService {
 
   async crearHistorialMiembro(
     dto: crearHistorialMiembroDto,
+    queryRunner?: import('typeorm').QueryRunner,
   ): Promise<HistorialMiembro> {
     const { ...data } = dto;
 
@@ -41,25 +42,34 @@ export class OrganizacionService {
       ...(data.supervisor_id ? { supervisor: { id: data.supervisor_id } } : {}),
     });
 
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    if (queryRunner) {
+      await queryRunner.manager.save(historialMiembro);
+      return historialMiembro;
+    }
+
+    const ownQueryRunner = this.dataSource.createQueryRunner();
+    await ownQueryRunner.connect();
+    await ownQueryRunner.startTransaction();
 
     try {
-      await queryRunner.manager.save(historialMiembro);
-      await queryRunner.commitTransaction();
+      await ownQueryRunner.manager.save(historialMiembro);
+      await ownQueryRunner.commitTransaction();
     } catch (err) {
       console.log(err);
-      await queryRunner.rollbackTransaction();
+      await ownQueryRunner.rollbackTransaction();
       throw new HttpException('Error al crear miembro. Por favor, intente mas tarde', HttpStatus.INTERNAL_SERVER_ERROR);
     } finally {
-      await queryRunner.release();
+      await ownQueryRunner.release();
     }
 
     return historialMiembro;
   }
 
-  async actualizarHistorialMiembro(dto: Partial<crearHistorialMiembroDto>, miembroId: number): Promise<HistorialMiembro|null> {
+  async actualizarHistorialMiembro(
+    dto: Partial<crearHistorialMiembroDto>,
+    miembroId: number,
+    queryRunner?: import('typeorm').QueryRunner,
+  ): Promise<HistorialMiembro|null> {
     const { ...data } = dto;
 
     const historialViejo = await this.historialMiembroRepository.findOne({ 
@@ -74,31 +84,51 @@ export class OrganizacionService {
     const historialMiembro = this.historialMiembroRepository.create({
       servicio: { id: data.servicio_id },
       zona: { id: data.zona_id },
+      miembro: { id: miembroId },
       ...(data.supervisor_id ? { supervisor: { id: data.supervisor_id } } : {}),
     });
 
     if(!data?.servicio_id) {
-      historialMiembro.servicio = historialViejo.servicio;
+      historialMiembro.servicio = historialViejo?.servicio ?? null;
     }
 
-    if(historialViejo?.zona?.id == historialMiembro?.zona?.id && historialViejo?.servicio?.id == historialMiembro?.servicio?.id && historialViejo?.supervisor?.id == historialMiembro?.supervisor?.id) {
+    if(
+      historialViejo &&
+      historialViejo?.zona?.id == historialMiembro?.zona?.id &&
+      historialViejo?.servicio?.id == historialMiembro?.servicio?.id &&
+      historialViejo?.supervisor?.id == historialMiembro?.supervisor?.id
+    ) {
       return null; 
     }
 
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-    
+    const doWork = async (qr: import('typeorm').QueryRunner) => {
+      await qr.manager
+        .createQueryBuilder()
+        .softDelete()
+        .from(HistorialMiembro)
+        .where('miembro_id = :miembroId', { miembroId })
+        .execute();
+      await qr.manager.save(historialMiembro);
+    };
+
+    if (queryRunner) {
+      await doWork(queryRunner);
+      return historialMiembro;
+    }
+
+    const ownQueryRunner = this.dataSource.createQueryRunner();
+    await ownQueryRunner.connect();
+    await ownQueryRunner.startTransaction();
+
     try {
-      await this.historialMiembroRepository.softDelete({ miembro: { id: miembroId } });
-      await queryRunner.manager.save(historialMiembro);
-      await queryRunner.commitTransaction();
+      await doWork(ownQueryRunner);
+      await ownQueryRunner.commitTransaction();
     } catch (err) {
       console.log(err);
-      await queryRunner.rollbackTransaction();
+      await ownQueryRunner.rollbackTransaction();
       throw new HttpException('Error al actualizar historial. Por favor, intente mas tarde', HttpStatus.INTERNAL_SERVER_ERROR);
     } finally {
-      await queryRunner.release();
+      await ownQueryRunner.release();
     }
 
     return historialMiembro;

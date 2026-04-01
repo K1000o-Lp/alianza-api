@@ -79,9 +79,6 @@ export class PersonaService {
       throw new HttpException('Ya existe un miembro con la misma cedula o nombre completo', HttpStatus.BAD_REQUEST);
     }
 
-    const historialMiembro =
-      await this.organizacionService.crearHistorialMiembro(historial);
-
     const miembro = this.miembroRepository.create({
       cedula: data.cedula ? data.cedula : null,
       nombre_completo: data.nombre_completo,
@@ -100,7 +97,6 @@ export class PersonaService {
       discapacidad: {
         id: data.discapacidad_id,
       },
-      historiales:  [ historialMiembro ],
     });
   
     const queryRunner = this.dataSource.createQueryRunner();
@@ -110,6 +106,9 @@ export class PersonaService {
 
     try {
       await queryRunner.manager.save(miembro);
+      const historialMiembro = await this.organizacionService.crearHistorialMiembro(historial, queryRunner);
+      historialMiembro.miembro = miembro;
+      await queryRunner.manager.save(historialMiembro);
       await queryRunner.commitTransaction();
     } catch(err) {
       await queryRunner.rollbackTransaction();
@@ -147,28 +146,26 @@ export class PersonaService {
       throw new HttpException('Miembro no encontrado', HttpStatus.NOT_FOUND);
     }
 
-    const nuevoHistorialMiembro = await this.organizacionService.actualizarHistorialMiembro(historial, id);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
     miembro.cedula = data.cedula ? data.cedula : miembro.cedula;
     miembro.nombre_completo = data.nombre_completo ? data.nombre_completo : miembro.nombre_completo;
     miembro.telefono = data.telefono ? data.telefono : miembro.telefono;
     miembro.fecha_nacimiento = data.fecha_nacimiento ? data.fecha_nacimiento : miembro.fecha_nacimiento;
     miembro.hijos = data.hijos ? data.hijos : miembro.hijos;
-    miembro.educacion.id = data.educacion_id ? data.educacion_id : miembro.educacion.id;
-    miembro.estado_civil.id = data.estado_civil_id ? data.estado_civil_id : miembro.estado_civil.id;
-    miembro.ocupacion.id = data.ocupacion_id ? data.ocupacion_id : miembro.ocupacion.id;
-    miembro.discapacidad.id = data.discapacidad_id ? data.discapacidad_id : miembro.discapacidad.id;
-    
-    if(nuevoHistorialMiembro) {
-      miembro.historiales.push(nuevoHistorialMiembro);
-    }
-
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    miembro.educacion = data.educacion_id ? { id: data.educacion_id } as any : miembro.educacion;
+    miembro.estado_civil = data.estado_civil_id ? { id: data.estado_civil_id } as any : miembro.estado_civil;
+    miembro.ocupacion = data.ocupacion_id ? { id: data.ocupacion_id } as any : miembro.ocupacion;
+    miembro.discapacidad = data.discapacidad_id ? { id: data.discapacidad_id } as any : miembro.discapacidad;
 
     try {
       await queryRunner.manager.save(miembro);
+      const nuevoHistorialMiembro = await this.organizacionService.actualizarHistorialMiembro(historial, id, queryRunner);
+      if(nuevoHistorialMiembro) {
+        miembro.historiales.push(nuevoHistorialMiembro);
+      }
       await queryRunner.commitTransaction();
     } catch(err) {
       await queryRunner.rollbackTransaction();
