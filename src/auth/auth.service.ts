@@ -159,14 +159,28 @@ export class AuthService {
       await this.personaService.transferirZona(miembroExistente.id, dto.zona_id);
       miembroId = miembroExistente.id;
     } else {
-      const miembro = await this.personaService.crearMiembro({
-        nombre_completo: dto.nombre_completo.toUpperCase(),
-        cedula: dto.cedula,
-        telefono: dto.telefono,
-        fecha_nacimiento: dto.fecha_nacimiento,
-        historial: { zona_id: dto.zona_id },
-      });
-      miembroId = miembro.id;
+      try {
+        const miembro = await this.personaService.crearMiembro({
+          nombre_completo: dto.nombre_completo.toUpperCase(),
+          cedula: dto.cedula,
+          telefono: dto.telefono,
+          fecha_nacimiento: dto.fecha_nacimiento,
+          historial: { zona_id: dto.zona_id },
+        });
+        miembroId = miembro.id;
+      } catch (err) {
+        // If member exists, check whether they already have a user account
+        if (err?.status === HttpStatus.CONFLICT && err?.response?.miembro) {
+          const usuarioExistente = await this.usuariosService.findByMiembro(err.response.miembro.id);
+          if (usuarioExistente) {
+            throw new HttpException(
+              { message: 'Este miembro ya tiene una cuenta registrada. Inicia sesión.', tieneUsuario: true },
+              HttpStatus.CONFLICT,
+            );
+          }
+        }
+        throw err;
+      }
     }
 
     const usuario = await this.usuariosService.crearUsuario({

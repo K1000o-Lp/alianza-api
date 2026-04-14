@@ -98,11 +98,18 @@ export class PersonaService {
       );
     }
 
+    const fechaNacimientoValida =
+      data.fecha_nacimiento instanceof Date && !isNaN(data.fecha_nacimiento.getTime())
+        ? data.fecha_nacimiento
+        : null;
+    const cedulaValida = data.cedula?.trim() || null;
+    const telefonoValido = data.telefono?.trim() || null;
+
     const miembro = this.miembroRepository.create({
-      cedula: data.cedula ? data.cedula : null,
+      cedula: cedulaValida,
       nombre_completo: data.nombre_completo,
-      fecha_nacimiento: data.fecha_nacimiento? data.fecha_nacimiento : null,
-      telefono: data.telefono ? data.telefono : null,
+      fecha_nacimiento: fechaNacimientoValida,
+      telefono: telefonoValido,
       hijos: data.hijos ?? null,
       ...(data.estado_civil_id ? { estado_civil: { id: data.estado_civil_id } } : {}),
       ...(data.educacion_id ? { educacion: { id: data.educacion_id } } : {}),
@@ -126,6 +133,7 @@ export class PersonaService {
 
       await queryRunner.commitTransaction();
     } catch(err) {
+      console.log(err);
       await queryRunner.rollbackTransaction();
       throw new HttpException('Error al crear miembro. Por favor, intente mas tarde', HttpStatus.INTERNAL_SERVER_ERROR);
     } finally {
@@ -674,5 +682,77 @@ export class PersonaService {
     } finally {
       await queryRunner.release();
     }
+  }
+
+  async importarMiembros(
+    miembros: import('./dtos/importar-miembro.dto').ImportarMiembroDto[],
+    transferir: boolean,
+  ): Promise<import('./dtos/importar-miembro.dto').ImportarMiembrosResultado> {
+    const BAUTISMO_REQUISITO_IDS = [1, 2, 3];
+    let importados = 0;
+    let transferidos = 0;
+    let omitidos = 0;
+    let fallidos = 0;
+    const detalle: import('./dtos/importar-miembro.dto').ImportarMiembroResultadoItem[] = [];
+
+    const zonas = await this.organizacionService.obtenerZonas();
+    const nombreZona = (id: number) => zonas.find((z) => z.id === id)?.descripcion ?? `zona ${id}`;
+
+    for (const row of miembros) {
+      const nombre = row.nombre_completo?.trim().toUpperCase();
+      try {
+        const existente = await this.obtenerMiembroExistentePorIdentificacion(row.cedula, nombre);
+
+        if (existente) {
+          const historialActivo = existente.historiales?.find((h) => !h.fecha_finalizacion);
+          const zonaActualId = historialActivo?.zona?.id;
+          const zonaActual = historialActivo?.zona?.descripcion ?? 'zona desconocida';
+          const zonaDestino = nombreZona(row.zona_id);
+
+          // Already in the target zone — nothing to do
+          if (zonaActualId === row.zona_id) {
+            omitidos++;
+            detalle.push({ nombre_completo: nombre, cedula: row.cedula, exito: true, omitido: true, error: `Ya existe en la zona ${zonaActual}` });
+            continue;
+          }
+
+          if (transferir) {
+            await this.transferirZona(existente.id, row.zona_id);
+            transferidos++;
+            detalle.push({ nombre_completo: nombre, cedula: row.cedula, exito: true, transferido: true });
+          } else {
+            fallidos++;
+            detalle.push({
+              nombre_completo: nombre,
+              cedula: row.cedula,
+              exito: false,
+              error: `Ya existe en el sistema (zona actual: ${zonaActual} → zona destino: ${zonaDestino})`,
+            });
+          }
+          continue;
+        }
+
+        const parsedFecha = row.fecha_nacimiento ? new Date(row.fecha_nacimiento) : undefined;
+        const fechaNacimiento = parsedFecha && !isNaN(parsedFecha.getTime()) ? parsedFecha : undefined;
+
+        const miembro = await this.crearMiembro({
+          nombre_completo: nombre,
+          cedula: row.cedula?.trim() || undefined,
+          telefono: row.telefono?.trim() || undefined,
+          fecha_nacimiento: fechaNacimiento,
+          historial: { zona_id: row.zona_id },
+          ...(row.bautizado ? { requisito: { requisito_ids: BAUTISMO_REQUISITO_IDS } } : {}),
+        });
+
+        importados++;
+        detalle.push({ nombre_completo: miembro.nombre_completo, cedula: miembro.cedula, exito: true });
+      } catch (err) {
+        fallidos++;
+        const msg = err?.response?.message ?? err?.message ?? 'Error desconocido';
+        detalle.push({ nombre_completo: nombre, cedula: row.cedula, exito: false, error: msg });
+      }
+    }
+
+    return { importados, transferidos, omitidos, fallidos, detalle };
   }
 }

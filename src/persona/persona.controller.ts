@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Injectable, Param, Post, Put, Query, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, Res } from '@nestjs/common';
 import { PersonaService } from './persona.service';
 import { CrearMiembroDto } from './dtos/crear-miembro.dto';
+import { ImportarMiembroDto, ImportarMiembrosResultado } from './dtos/importar-miembro.dto';
 import {
   Discapacidad,
   Educacion,
@@ -40,6 +41,13 @@ export class PersonaController {
     @Body() dto: CrearMiembroDto,
   ): Promise<Miembro> {
     return this.personaService.crearMiembro(dto);
+  }
+
+  @Post('miembros/importar')
+  importarMiembros(
+    @Body() dto: { miembros: ImportarMiembroDto[]; transferir?: boolean },
+  ): Promise<ImportarMiembrosResultado> {
+    return this.personaService.importarMiembros(dto.miembros, dto.transferir ?? false);
   }
 
   @Put('miembros/:id')
