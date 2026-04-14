@@ -48,16 +48,7 @@ jobs:
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
             "source ~/.nvm/nvm.sh && cd ${{ secrets.SERVER_DEPLOY_PATH }} && rm -rf node_modules && npm ci --omit=dev"
 
-      # Descomenta el paso que aplique para reiniciar el servicio:
-
-      # Opción A - PM2
-      # - name: Restart service (PM2)
-      #   run: |
-      #     ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-      #       "pm2 restart alianza-api"
-
-      # Opción B - systemd
-      # - name: Restart service (systemd)
-      #   run: |
-      #     ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-      #       "sudo systemctl restart alianza-api"
+      - name: Restart service (PM2)
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "source ~/.nvm/nvm.sh && pm2 restart alianza-api --update-env"
