@@ -51,4 +51,4 @@ jobs:
       - name: Restart service (PM2)
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "source ~/.nvm/nvm.sh && pm2 restart alianza-api --update-env"
+            "source ~/.nvm/nvm.sh && pm2 restart alianza_api --update-env"
