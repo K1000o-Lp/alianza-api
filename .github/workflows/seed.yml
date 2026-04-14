@@ -1,0 +1,48 @@
+name: Run Database Seeders
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Seeder a ejecutar (vacío = todos)'
+        required: false
+        default: ''
+        type: choice
+        options:
+          - ''
+          - roles
+          - admin
+          - pastores
+          - miembros
+          - hash-passwords
+
+jobs:
+  seed:
+    name: Run Seeders on Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Run seeders on server
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} bash << 'EOF'
+            source ~/.nvm/nvm.sh
+            cd ${{ secrets.SERVER_DEPLOY_PATH }}
+
+            echo "Instalando devDependencies para ts-node..."
+            npm ci --include=dev
+
+            echo "Ejecutando seeders..."
+            npm run seed -- ${{ github.event.inputs.target }}
+
+            echo "Limpiando devDependencies..."
+            npm ci --omit=dev
+
+            echo "Listo."
+          EOF
