@@ -42,7 +42,7 @@ jobs:
             npm run seed -- ${{ github.event.inputs.target }}
 
             echo "Limpiando devDependencies..."
-            npm ci --omit=dev
+            rm -rf node_modules && npm ci --omit=dev
 
             echo "Listo."
           EOF

@@ -46,7 +46,7 @@ jobs:
       - name: Install production dependencies on server
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "source ~/.nvm/nvm.sh && cd ${{ secrets.SERVER_DEPLOY_PATH }} && npm ci --omit=dev"
+            "source ~/.nvm/nvm.sh && cd ${{ secrets.SERVER_DEPLOY_PATH }} && rm -rf node_modules && npm ci --omit=dev"
 
       # Descomenta el paso que aplique para reiniciar el servicio:
 
