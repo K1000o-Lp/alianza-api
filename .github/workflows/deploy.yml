@@ -33,20 +33,20 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
+      - name: Sync source code on server
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
+            "cd ${{ secrets.SERVER_DEPLOY_PATH }} && git fetch origin && git reset --hard origin/main"
+
       - name: Copy build via SCP
         run: |
-          scp -r dist package.json package-lock.json \
+          scp -r dist \
             ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.SERVER_DEPLOY_PATH }}
 
       - name: Install production dependencies on server
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
             "source ~/.nvm/nvm.sh && cd ${{ secrets.SERVER_DEPLOY_PATH }} && npm ci --omit=dev"
-
-      - name: Pull latest code on server
-        run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} \
-            "cd ${{ secrets.SERVER_DEPLOY_PATH }} && git pull origin main"
 
       # Descomenta el paso que aplique para reiniciar el servicio:
 
