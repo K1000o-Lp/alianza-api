@@ -37,8 +37,8 @@ export class OrganizacionService {
     const { ...data } = dto;
 
     const historialMiembro = this.historialMiembroRepository.create({
-      servicio: { id: data.servicio_id },
-      zona: { id: data.zona_id },
+      ...(data.servicio_id ? { servicio: { id: data.servicio_id } } : {}),
+      ...(data.zona_id ? { zona: { id: data.zona_id } } : {}),
       ...(data.supervisor_id ? { supervisor: { id: data.supervisor_id } } : {}),
     });
 

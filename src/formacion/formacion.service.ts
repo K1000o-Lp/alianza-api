@@ -180,4 +180,30 @@ export class FormacionService {
 
     return { mensaje: 'Resultado eliminado' };
   }
+
+  async registrarResultadoPorSesion(miembro_id: number, requisito_id: number): Promise<Resultado> {
+    const requisito = await this.requisitoRepository.findOne({ where: { id: requisito_id } });
+
+    if (!requisito) {
+      throw new HttpException('Requisito no encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    const yaRegistrado = await this.resultadoRepository.findOne({
+      where: { miembro: { id: miembro_id }, requisito: { id: requisito_id } },
+    });
+
+    if (yaRegistrado) {
+      throw new HttpException('El proceso de formación ya fue registrado', HttpStatus.CONFLICT);
+    }
+
+    const resultado = this.resultadoRepository.create({
+      miembro: { id: miembro_id },
+      requisito,
+      creado_en: new Date(),
+    });
+
+    await this.resultadoRepository.save(resultado);
+
+    return resultado;
+  }
 }

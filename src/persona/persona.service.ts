@@ -73,10 +73,29 @@ export class PersonaService {
   async crearMiembro(dto: CrearMiembroDto): Promise<Miembro> {
     const { historial, requisito, ...data } = dto;
 
-    const miembroExiste = await this.verificarSiMiembroExiste({ cedula: data.cedula, nombre_completo: data.nombre_completo });
+    const miembroExistente = await this.miembroRepository.findOne({
+      where: [
+        ...(data.cedula ? [{ cedula: data.cedula }] : []),
+        { nombre_completo: data.nombre_completo },
+      ],
+      relations: { historiales: { zona: true } },
+    });
 
-    if(miembroExiste) {
-      throw new HttpException('Ya existe un miembro con la misma cedula o nombre completo', HttpStatus.BAD_REQUEST);
+    if (miembroExistente) {
+      const historialActivo = miembroExistente.historiales?.find((h) => !h.fecha_finalizacion);
+      throw new HttpException(
+        {
+          message: 'Ya existe un miembro con la misma cedula o nombre completo',
+          miembro: {
+            id: miembroExistente.id,
+            nombre_completo: miembroExistente.nombre_completo,
+            zona: historialActivo?.zona
+              ? { id: historialActivo.zona.id, descripcion: historialActivo.zona.descripcion }
+              : null,
+          },
+        },
+        HttpStatus.CONFLICT,
+      );
     }
 
     const miembro = this.miembroRepository.create({
@@ -85,18 +104,10 @@ export class PersonaService {
       fecha_nacimiento: data.fecha_nacimiento? data.fecha_nacimiento : null,
       telefono: data.telefono ? data.telefono : null,
       hijos: data.hijos ?? null,
-      estado_civil: {
-        id: data.estado_civil_id ? data.estado_civil_id : null,
-      },
-      educacion: {
-        id: data.educacion_id ? data.educacion_id : null,
-      },
-      ocupacion: {
-        id: data.ocupacion_id,
-      },
-      discapacidad: {
-        id: data.discapacidad_id,
-      },
+      ...(data.estado_civil_id ? { estado_civil: { id: data.estado_civil_id } } : {}),
+      ...(data.educacion_id ? { educacion: { id: data.educacion_id } } : {}),
+      ...(data.ocupacion_id ? { ocupacion: { id: data.ocupacion_id } } : {}),
+      ...(data.discapacidad_id ? { discapacidad: { id: data.discapacidad_id } } : {}),
     });
   
     const queryRunner = this.dataSource.createQueryRunner();
@@ -106,9 +117,13 @@ export class PersonaService {
 
     try {
       await queryRunner.manager.save(miembro);
-      const historialMiembro = await this.organizacionService.crearHistorialMiembro(historial, queryRunner);
-      historialMiembro.miembro = miembro;
-      await queryRunner.manager.save(historialMiembro);
+
+      if (historial?.zona_id) {
+        const historialMiembro = await this.organizacionService.crearHistorialMiembro(historial, queryRunner);
+        historialMiembro.miembro = miembro;
+        await queryRunner.manager.save(historialMiembro);
+      }
+
       await queryRunner.commitTransaction();
     } catch(err) {
       await queryRunner.rollbackTransaction();
@@ -117,7 +132,7 @@ export class PersonaService {
       await queryRunner.release();
     }
 
-    if(requisito.requisito_ids && requisito.requisito_ids?.length > 0) {
+    if(requisito?.requisito_ids && requisito.requisito_ids?.length > 0) {
       const resultados = await this.formationService.crearResultado({
         miembro_id: miembro.id,
         requisito_ids: requisito.requisito_ids,
@@ -630,10 +645,34 @@ export class PersonaService {
     return await workbook.xlsx.writeBuffer();
   }
 
-  async verificarSiMiembroExiste(options: {
-    cedula: string;
-    nombre_completo: string;
-  }): Promise<boolean> {
-    return await this.miembroRepository.existsBy([{ cedula: options.cedula }, { nombre_completo: options.nombre_completo }]);
+  async obtenerMiembroExistentePorIdentificacion(
+    cedula: string,
+    nombre_completo: string,
+  ): Promise<Miembro | null> {
+    return await this.miembroRepository.findOne({
+      where: [
+        ...(cedula ? [{ cedula }] : []),
+        { nombre_completo },
+      ],
+      relations: { historiales: { zona: true } },
+    });
+  }
+
+  async transferirZona(miembroId: number, zonaId: number): Promise<void> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      await this.organizacionService.actualizarHistorialMiembro({ zona_id: zonaId }, miembroId, queryRunner);
+      await queryRunner.commitTransaction();
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw new HttpException(
+        'Error al transferir zona. Por favor, intente mas tarde',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    } finally {
+      await queryRunner.release();
+    }
   }
 }
