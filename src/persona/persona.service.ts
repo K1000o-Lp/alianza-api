@@ -684,11 +684,27 @@ export class PersonaService {
     }
   }
 
+  private buildRequisitosIds(row: import('./dtos/importar-miembro.dto').ImportarMiembroDto): number[] {
+    const map: [keyof import('./dtos/importar-miembro.dto').ImportarMiembroDto, number][] = [
+      ['grupo_conexion', 1],
+      ['primeros_pasos', 2],
+      ['bautismo', 3],
+      ['encuentro', 4],
+      ['pos_encuentro', 5],
+      ['doctrinas_1', 6],
+      ['doctrinas_2', 7],
+      ['entrenamiento_liderazgo', 8],
+      ['liderazgo', 9],
+      ['encuentro_oracion', 10],
+      ['lider', 11],
+    ];
+    return map.filter(([col]) => row[col] === true).map(([, id]) => id);
+  }
+
   async importarMiembros(
     miembros: import('./dtos/importar-miembro.dto').ImportarMiembroDto[],
     transferir: boolean,
   ): Promise<import('./dtos/importar-miembro.dto').ImportarMiembrosResultado> {
-    const BAUTISMO_REQUISITO_IDS = [1, 2, 3];
     let importados = 0;
     let transferidos = 0;
     let omitidos = 0;
@@ -701,7 +717,13 @@ export class PersonaService {
     for (const row of miembros) {
       const nombre = row.nombre_completo?.trim().toUpperCase();
       try {
-        const existente = await this.obtenerMiembroExistentePorIdentificacion(row.cedula, nombre);
+        const existente = await this.miembroRepository.findOne({
+          where: [
+            ...(row.cedula?.trim() ? [{ cedula: row.cedula.trim() }] : []),
+            { nombre_completo: nombre },
+          ],
+          relations: { historiales: { zona: true }, resultados: { requisito: true } },
+        });
 
         if (existente) {
           const historialActivo = existente.historiales?.find((h) => !h.fecha_finalizacion);
@@ -709,7 +731,23 @@ export class PersonaService {
           const zonaActual = historialActivo?.zona?.descripcion ?? 'zona desconocida';
           const zonaDestino = nombreZona(row.zona_id);
 
-          // Already in the target zone — nothing to do
+          // Add any missing requisitos for the existing member (always, regardless of zone)
+          const requisitosIds = this.buildRequisitosIds(row);
+          if (requisitosIds.length > 0) {
+            const yaExistentes = new Set(
+              existente.resultados?.map((r) => r.requisito?.id).filter(Boolean) ?? [],
+            );
+            const faltantes = requisitosIds.filter((id) => !yaExistentes.has(id));
+            if (faltantes.length > 0) {
+              await this.formationService.crearResultado({
+                miembro_id: existente.id,
+                requisito_ids: faltantes,
+                fecha_consolidacion: new Date(),
+              });
+            }
+          }
+
+          // Already in the target zone — skip zone transfer
           if (zonaActualId === row.zona_id) {
             omitidos++;
             detalle.push({ nombre_completo: nombre, cedula: row.cedula, exito: true, omitido: true, error: `Ya existe en la zona ${zonaActual}` });
@@ -735,20 +773,22 @@ export class PersonaService {
         const parsedFecha = row.fecha_nacimiento ? new Date(row.fecha_nacimiento) : undefined;
         const fechaNacimiento = parsedFecha && !isNaN(parsedFecha.getTime()) ? parsedFecha : undefined;
 
+        const requisitosIds = this.buildRequisitosIds(row);
+
         const miembro = await this.crearMiembro({
           nombre_completo: nombre,
           cedula: row.cedula?.trim() || undefined,
           telefono: row.telefono?.trim() || undefined,
           fecha_nacimiento: fechaNacimiento,
           historial: { zona_id: row.zona_id },
-          ...(row.bautizado ? { requisito: { requisito_ids: BAUTISMO_REQUISITO_IDS } } : {}),
+          ...(requisitosIds.length > 0 ? { requisito: { requisito_ids: requisitosIds } } : {}),
         });
 
         importados++;
         detalle.push({ nombre_completo: miembro.nombre_completo, cedula: miembro.cedula, exito: true });
       } catch (err) {
         fallidos++;
-        const msg = err?.response?.message ?? err?.message ?? 'Error desconocido';
+        const msg = (err as any)?.response?.message ?? (err as any)?.message ?? 'Error desconocido';
         detalle.push({ nombre_completo: nombre, cedula: row.cedula, exito: false, error: msg });
       }
     }
