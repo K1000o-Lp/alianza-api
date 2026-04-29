@@ -224,7 +224,7 @@ export class PersonaService {
       .leftJoinAndSelect('miembro.ocupacion', 'ocupacion')
       .leftJoinAndSelect('miembro.educacion', 'educacion')
       .leftJoinAndSelect('miembro.discapacidad', 'discapacidad')
-      .leftJoinAndSelect('miembro.historiales', 'historiales')
+      .leftJoinAndSelect('miembro.historiales', 'historiales', 'historiales.fecha_finalizacion IS NULL')
       .leftJoinAndSelect('historiales.servicio', 'servicio')
       .leftJoinAndSelect('historiales.zona', 'zona')
       .leftJoinAndSelect('historiales.supervisor', 'supervisor')

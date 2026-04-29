@@ -1,7 +1,7 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { HistorialMiembro, Servicio, Zona, ZonaSupervisor } from './entities';
+import { EstadoSolicitud, HistorialMiembro, Servicio, SolicitudTransferencia, Zona, ZonaSupervisor } from './entities';
 import { crearHistorialMiembroDto } from './dtos/crear-historial-miembro.dto';
 import { crearZonaSupervisorDto } from './dtos/crear-zona-supervisor.dto';
 
@@ -15,6 +15,8 @@ export class OrganizacionService {
     private historialMiembroRepository: Repository<HistorialMiembro>,
     @InjectRepository(ZonaSupervisor)
     private zonaSupervisorRepository: Repository<ZonaSupervisor>,
+    @InjectRepository(SolicitudTransferencia)
+    private solicitudRepository: Repository<SolicitudTransferencia>,
     private dataSource: DataSource
   ) {}
 
@@ -189,5 +191,140 @@ export class OrganizacionService {
     }
 
     await this.zonaSupervisorRepository.softDelete({ id: id });
+  }
+
+  // ─── Solicitudes de transferencia ────────────────────────────────────────
+
+  async crearSolicitudTransferencia(dto: {
+    miembro_id: number;
+    zona_origen_id: number;
+    zona_destino_id: number;
+    solicitante_id?: number;
+  }): Promise<SolicitudTransferencia> {
+    // Prevent duplicates: only one pending request per miembro+destino
+    const existe = await this.solicitudRepository.findOne({
+      where: {
+        miembro: { id: dto.miembro_id },
+        zona_destino: { id: dto.zona_destino_id },
+        estado: EstadoSolicitud.PENDIENTE,
+      },
+    });
+
+    if (existe) {
+      throw new HttpException(
+        'Ya existe una solicitud de transferencia pendiente para este miembro a esa zona.',
+        HttpStatus.CONFLICT,
+      );
+    }
+
+    const solicitud = this.solicitudRepository.create({
+      miembro: { id: dto.miembro_id },
+      zona_origen: { id: dto.zona_origen_id },
+      zona_destino: { id: dto.zona_destino_id },
+      ...(dto.solicitante_id ? { solicitante: { id: dto.solicitante_id } } : {}),
+      estado: EstadoSolicitud.PENDIENTE,
+    });
+
+    return await this.solicitudRepository.save(solicitud);
+  }
+
+  async obtenerSolicitudesTransferencia(options: {
+    zona_origen_id?: number;
+    zona_destino_id?: number;
+    estado?: EstadoSolicitud;
+  }): Promise<SolicitudTransferencia[]> {
+    const qb = this.solicitudRepository
+      .createQueryBuilder('s')
+      .leftJoinAndSelect('s.miembro', 'miembro')
+      .leftJoinAndSelect('s.zona_origen', 'zona_origen')
+      .leftJoinAndSelect('s.zona_destino', 'zona_destino')
+      .leftJoinAndSelect('s.solicitante', 'solicitante')
+      .leftJoinAndSelect('solicitante.miembro', 'solicitante_miembro')
+      .leftJoinAndSelect('s.aprobado_por', 'aprobado_por')
+      .leftJoinAndSelect('aprobado_por.miembro', 'aprobado_por_miembro')
+      .orderBy('s.creado_en', 'DESC');
+
+    if (options.zona_origen_id) {
+      qb.andWhere('zona_origen.id = :zonaOrigen', { zonaOrigen: options.zona_origen_id });
+    }
+    if (options.zona_destino_id) {
+      qb.andWhere('zona_destino.id = :zonaDestino', { zonaDestino: options.zona_destino_id });
+    }
+    if (options.estado) {
+      qb.andWhere('s.estado = :estado', { estado: options.estado });
+    }
+
+    return await qb.getMany();
+  }
+
+  async aprobarSolicitudTransferencia(
+    solicitudId: number,
+    aprobadorId: number,
+  ): Promise<SolicitudTransferencia> {
+    const solicitud = await this.solicitudRepository.findOne({
+      where: { id: solicitudId },
+      relations: { miembro: true, zona_destino: true, zona_origen: true },
+    });
+
+    if (!solicitud) {
+      throw new HttpException('Solicitud no encontrada', HttpStatus.NOT_FOUND);
+    }
+
+    if (solicitud.estado !== EstadoSolicitud.PENDIENTE) {
+      throw new HttpException('La solicitud ya fue procesada', HttpStatus.CONFLICT);
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // Transfer the member to the destination zone
+      await this.actualizarHistorialMiembro(
+        { zona_id: solicitud.zona_destino.id },
+        solicitud.miembro.id,
+        queryRunner,
+      );
+
+      solicitud.estado = EstadoSolicitud.APROBADA;
+      solicitud.aprobado_en = new Date();
+      solicitud.aprobado_por = { id: aprobadorId } as any;
+
+      await queryRunner.manager.save(solicitud);
+      await queryRunner.commitTransaction();
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw new HttpException(
+        'Error al aprobar la solicitud. Por favor, intente más tarde.',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    } finally {
+      await queryRunner.release();
+    }
+
+    return solicitud;
+  }
+
+  async rechazarSolicitudTransferencia(
+    solicitudId: number,
+    aprobadorId: number,
+  ): Promise<SolicitudTransferencia> {
+    const solicitud = await this.solicitudRepository.findOne({
+      where: { id: solicitudId },
+    });
+
+    if (!solicitud) {
+      throw new HttpException('Solicitud no encontrada', HttpStatus.NOT_FOUND);
+    }
+
+    if (solicitud.estado !== EstadoSolicitud.PENDIENTE) {
+      throw new HttpException('La solicitud ya fue procesada', HttpStatus.CONFLICT);
+    }
+
+    solicitud.estado = EstadoSolicitud.RECHAZADA;
+    solicitud.aprobado_en = new Date();
+    solicitud.aprobado_por = { id: aprobadorId } as any;
+
+    return await this.solicitudRepository.save(solicitud);
   }
 }

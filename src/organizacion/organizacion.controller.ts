@@ -1,6 +1,7 @@
-import { Body, Controller, Delete, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { OrganizacionService } from './organizacion.service';
 import { crearZonaSupervisorDto } from './dtos/crear-zona-supervisor.dto';
+import { EstadoSolicitud } from './entities';
 
 @Controller('organizacion')
 export class OrganizacionController {
@@ -46,5 +47,46 @@ export class OrganizacionController {
     @Param('id') id: string
   ) {
     return this.organizacionService.eliminarSupervisor(Number(id));
+  }
+
+  // ─── Solicitudes de transferencia ────────────────────────────────────────
+
+  @Post('solicitudes-transferencia')
+  crearSolicitud(
+    @Body() dto: {
+      miembro_id: number;
+      zona_origen_id: number;
+      zona_destino_id: number;
+      solicitante_id?: number;
+    },
+  ) {
+    return this.organizacionService.crearSolicitudTransferencia(dto);
+  }
+
+  @Get('solicitudes-transferencia')
+  obtenerSolicitudes(
+    @Query() options: {
+      zona_origen_id?: number;
+      zona_destino_id?: number;
+      estado?: EstadoSolicitud;
+    },
+  ) {
+    return this.organizacionService.obtenerSolicitudesTransferencia(options);
+  }
+
+  @Put('solicitudes-transferencia/:id/aprobar')
+  aprobarSolicitud(
+    @Param('id') id: string,
+    @Body() dto: { aprobador_id: number },
+  ) {
+    return this.organizacionService.aprobarSolicitudTransferencia(Number(id), dto.aprobador_id);
+  }
+
+  @Put('solicitudes-transferencia/:id/rechazar')
+  rechazarSolicitud(
+    @Param('id') id: string,
+    @Body() dto: { aprobador_id: number },
+  ) {
+    return this.organizacionService.rechazarSolicitudTransferencia(Number(id), dto.aprobador_id);
   }
 }
