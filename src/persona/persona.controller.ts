@@ -108,6 +108,19 @@ export class PersonaController {
     return res.send(buffer);
   }
 
+  @Get('miembros/exportar-csv')
+  async exportarMiembrosCSV(
+    @Query() options: { zona?: number; supervisor?: number; q?: string },
+    @Res() res: Response,
+  ) {
+    const csv = await this.personaService.exportarMiembrosCSV(options);
+    const fecha = new Date().toISOString().slice(0, 10);
+    res.set('Content-Disposition', `attachment; filename="miembros_${fecha}.csv"`);
+    res.set('Content-Type', 'text/csv; charset=utf-8');
+    // BOM so Excel opens with correct UTF-8 encoding
+    return res.send('\ufeff' + csv);
+  }
+
   @Get('estadisticas/reportes')
   async obtenerEstadisticasExcel(
     @Query() options: {

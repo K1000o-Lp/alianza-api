@@ -684,6 +684,60 @@ export class PersonaService {
     }
   }
 
+  async exportarMiembrosCSV(options: {
+    zona?: number;
+    supervisor?: number;
+    q?: string;
+  }): Promise<string> {
+    const REQUISITO_COLS: [number, string][] = [
+      [1, 'grupo_conexion'],
+      [2, 'primeros_pasos'],
+      [3, 'bautismo'],
+      [4, 'encuentro'],
+      [5, 'pos_encuentro'],
+      [6, 'doctrinas_1'],
+      [7, 'doctrinas_2'],
+      [8, 'entrenamiento_liderazgo'],
+      [9, 'liderazgo'],
+      [10, 'encuentro_oracion'],
+      [11, 'lider'],
+    ];
+
+    const escape = (val: string | number | null | undefined): string => {
+      const str = val === null || val === undefined ? '' : String(val);
+      return `"${str.replace(/"/g, '""')}"`;
+    };
+
+    const miembros = await this.obtenerMiembros(options);
+
+    const header = [
+      'nombre_completo', 'zona', 'cedula', 'telefono', 'fecha_nacimiento',
+      ...REQUISITO_COLS.map(([, col]) => col),
+    ].join(',');
+
+    const rows = miembros.map((m) => {
+      const historialActivo = m.historiales?.find((h) => !h.fecha_finalizacion);
+      const zonaId = historialActivo?.zona?.id ?? '';
+      const requisitosSet = new Set(
+        m.resultados?.map((r) => r.requisito?.id).filter(Boolean) ?? [],
+      );
+      const fechaNac = m.fecha_nacimiento
+        ? new Date(m.fecha_nacimiento).toISOString().split('T')[0]
+        : '';
+
+      return [
+        escape(m.nombre_completo),
+        escape(zonaId),
+        escape(m.cedula),
+        escape(m.telefono),
+        escape(fechaNac),
+        ...REQUISITO_COLS.map(([id]) => escape(requisitosSet.has(id) ? 'SI' : 'NO')),
+      ].join(',');
+    });
+
+    return [header, ...rows].join('\n');
+  }
+
   private buildRequisitosIds(row: import('./dtos/importar-miembro.dto').ImportarMiembroDto): number[] {
     const map: [keyof import('./dtos/importar-miembro.dto').ImportarMiembroDto, number][] = [
       ['grupo_conexion', 1],
